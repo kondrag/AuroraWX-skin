@@ -1,0 +1,114 @@
+#encoding UTF-8
+## +-------------------------------------------------------------------------+
+## |    gallery.html.tmpl                Template file for "gallery" page    |
+## +-------------------------------------------------------------------------+
+
+<!DOCTYPE html>
+<html lang="$Extras.language">
+<head>
+  <title>
+    $Extras.Translations[$Extras.language].gallery | $station.location
+  </title>
+  #include "head.inc"
+  <link rel="stylesheet" href="css/aurora.css">
+</head>
+<body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
+
+#attr $active_nav = 'gallery'
+#include "header.inc"
+
+<main data-aurora-page="gallery">
+  <div class="container-fluid d-flex-xxl">
+
+  #if not $aurora.enabled
+    <div class="row my-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <h5 class="card-title">$Extras.Translations[$Extras.language].gallery</h5>
+            <p class="card-text mb-0">
+              Aurora section is disabled. Set <code>cam_dir</code> under
+              <code>[Extras][[Aurora]]</code> to enable it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  #else
+    <div class="row my-4">
+      <div class="col-12">
+        <h4>$Extras.Translations[$Extras.language].gallery
+          <small class="text-muted ml-2">last $len($aurora.days) days</small></h4>
+      </div>
+    </div>
+
+    #for $day in $aurora.days
+    <div class="row my-3">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">$day.day_name
+              <small class="text-muted ml-2">$day.date_iso
+                #if $day.is_today <span class="badge badge-info ml-1">today</span> #end if
+              </small>
+            </h5>
+            <div class="row">
+              <div class="col-md-7 mb-3">
+                <h6>Aurora cam</h6>
+                #if $day.aurora_video
+                <video controls preload="none" class="w-100 rounded">
+                  <source src="$day.aurora_video" type="video/mp4">
+                </video>
+                #else
+                <div class="aurora-placeholder d-flex align-items-center justify-content-center">
+                  <span class="text-muted">Still encoding</span>
+                </div>
+                #end if
+              </div>
+              <div class="col-md-5 mb-3">
+                <h6>Cloud cam</h6>
+                #if $day.cloud_video
+                <video controls preload="none" class="w-100 rounded">
+                  <source src="$day.cloud_video" type="video/mp4">
+                </video>
+                #else
+                <div class="aurora-placeholder d-flex align-items-center justify-content-center">
+                  <span class="text-muted">Still encoding</span>
+                </div>
+                #end if
+              </div>
+              #if $day.spaceweather
+              <div class="col-12">
+                <h6>Space weather (3-day Kp)</h6>
+                <img src="$day.spaceweather" class="img-fluid rounded"
+                     alt="Kp history $day.date_iso">
+              </div>
+              #end if
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    #end for
+
+    #if not $aurora.days
+    <div class="row my-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body text-center py-5 text-muted">
+            No timelapses found yet.
+          </div>
+        </div>
+      </div>
+    </div>
+    #end if
+  #end if
+
+  </div>
+</main>
+
+#include "footer.inc"
+#include "js.inc"
+
+</body>
+</html>
