@@ -1,10 +1,10 @@
-# auroraWX
+# AuroraWX
 
 A WeeWX 5.x skin that unifies NeoWX Material-style weather pages with an
 aurora observatory section: live all-sky camera, rolling 7-day timelapse
 archive, and live space-weather (NOAA SWPC) data.
 
-auroraWX is a fork of [NeoWX Material](https://github.com/neoground/neowx-material)
+AuroraWX is a fork of [NeoWX Material](https://github.com/neoground/neowx-material)
 (MIT, © Neoground GmbH); aurora additions are MIT licensed as well.
 Requires WeeWX 5.x. No dependencies beyond WeeWX itself (pure stdlib Python).
 
@@ -25,7 +25,7 @@ Requires WeeWX 5.x. No dependencies beyond WeeWX itself (pure stdlib Python).
 
 ## How it serves camera files (important)
 
-auroraWX never copies your timelapses. You point it at the directory your
+AuroraWX never copies your timelapses. You point it at the directory your
 capture pipeline writes to and publish that directory under a web-server
 alias. This convention must hold (flat directory, date = file mtime):
 
@@ -103,7 +103,7 @@ without the daemon (it ignores `report_timing`).
 
 ## Migration from the old aurora-archive site
 
-1. Install auroraWX alongside the old UI and run both for one full
+1. Install AuroraWX alongside the old UI and run both for one full
    7-day rotation of timelapses (one week of parallel running).
 2. Confirm the gallery matches the old site's archive page for the same
    days, and that the live Kp/solar data renders.
@@ -138,7 +138,7 @@ derives the install path from the archive's common prefix).
 
 ## Licenses
 
-- auroraWX additions: MIT
+- AuroraWX additions: MIT
 - NeoWX Material (upstream): MIT, © 2020-2021 Neoground GmbH
 - Bundled libraries (ApexCharts, Bootstrap, MDB, jQuery, Weather Icons,
   Rubik font): their own MIT/OFL licenses, unchanged from upstream
