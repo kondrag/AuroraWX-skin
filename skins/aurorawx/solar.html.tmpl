@@ -1,0 +1,128 @@
+#encoding UTF-8
+## +-------------------------------------------------------------------------+
+## |    solar.html.tmpl                  Template file for "solar" page      |
+## +-------------------------------------------------------------------------+
+
+<!DOCTYPE html>
+<html lang="$Extras.language">
+<head>
+  <title>
+    $Extras.Translations[$Extras.language].solar | $station.location
+  </title>
+  #include "head.inc"
+  <link rel="stylesheet" href="css/aurora.css">
+</head>
+<body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
+
+#attr $active_nav = 'solar'
+#include "header.inc"
+
+<script type="application/json" id="aurora-config">
+{
+  "page": "solar",
+  "kpUrl": "$Extras.Aurora.kp_url",
+  "windUrl": "$Extras.Aurora.wind_url",
+  "magUrl": "$Extras.Aurora.mag_url",
+  "xraysUrl": "$Extras.Aurora.xrays_url",
+  "fluxUrl": "$Extras.Aurora.flux_url",
+  "regionsUrl": "$Extras.Aurora.regions_url",
+  "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
+  "snapshotRefreshSeconds": 0
+}
+</script>
+
+<main data-aurora-page="solar">
+  <div class="container-fluid d-flex-xxl">
+
+    <div class="row my-4">
+      <div class="col-6 col-md-2 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="kp-now">&mdash;</div>
+            <div class="text-muted">Kp index</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="kp-peak">&mdash;</div>
+            <div class="text-muted">Kp 24 h peak</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="bz-now">&mdash;</div>
+            <div class="text-muted">Bz (nT)</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="wind-now">&mdash;</div>
+            <div class="text-muted">Wind (km/s)</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="xray-class">&mdash;</div>
+            <div class="text-muted">X-ray class</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="h4 py-1" id="f107">&mdash;</div>
+            <div class="text-muted">F10.7 flux</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row my-4">
+      <div class="col-12 mb-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Kp index, last 24 hours</h5>
+            <div id="kp-chart"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Active sunspot regions</h5>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Region</th><th>Location</th><th>Area</th><th>Mag class</th>
+                    <th>C</th><th>M</th><th>X</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="regions-tbody">
+                  <tr><td colspan="8" class="text-muted">Loading&hellip;
+                    (requires JavaScript)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+#include "footer.inc"
+#include "js.inc"
+<script src="js/modules/aurora.js"></script>
+
+</body>
+</html>
