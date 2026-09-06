@@ -1,0 +1,7 @@
+.venv/
+dev-weewx/
+fixtures/cam_dir/
+__pycache__/
+*.pyc
+dist/
+*.tar.gz
