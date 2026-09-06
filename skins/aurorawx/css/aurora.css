@@ -44,3 +44,11 @@
 .aurora-status-card .display-4 {
   line-height: 1;
 }
+
+/* on ultra-wide screens .d-flex-xxl becomes a 50/50 two-column flex row;
+   keep the aurora status card on its own full-width band above it */
+@media (min-width: 1660px) {
+  .aurora-status-row {
+    flex: 0 0 100%;
+  }
+}

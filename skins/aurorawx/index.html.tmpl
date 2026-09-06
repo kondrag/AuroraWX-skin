@@ -136,6 +136,7 @@
     $Extras.Translations[$Extras.language].current | $station.location
   </title>
   #include "head.inc"
+  <link rel="stylesheet" href="css/aurora.css">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
@@ -143,7 +144,7 @@
 #include "header.inc"
 
 <main>
-  <div class="container-fluid d-flex-xxl">
+  <div class="container-fluid d-flex-xxl flex-wrap">
 
     <div class="row my-4 temprow align-content-start">
       #for $x in $Extras.Appearance.values_order
@@ -160,7 +161,7 @@
     </div>
 
     #if $aurora.enabled
-    <div class="row my-4">
+    <div class="row my-4 aurora-status-row">
       <div class="col-12">
         <div class="card aurora-status-card">
           <div class="card-body d-flex flex-wrap align-items-center">
