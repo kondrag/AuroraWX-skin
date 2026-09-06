@@ -58,7 +58,11 @@ alias. This convention must hold (flat directory, date = file mtime):
 
 ## Installation
 
-    weectl extension install aurorawx.tar.gz
+    weectl extension install dist/aurorawx-1.0.0.tar.gz
+
+Remove with:
+
+    weectl extension uninstall aurorawx
 
 Then edit `weewx.conf` (or `skins/aurorawx/skin.conf`):
 
@@ -117,7 +121,7 @@ run it after adding/removing skin files; `tests/test_install.py` enforces it.
 
 ### Building the package
 
-    git ls-files install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz --transform 's#^#aurorawx/#'
+    mkdir -p dist && git ls-files install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz --transform 's#^#aurorawx/#'
 
 The archive must contain a single top-level `aurorawx/` directory (WeeWX
 derives the install path from the archive's common prefix).
