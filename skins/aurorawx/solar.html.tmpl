@@ -26,6 +26,7 @@
   "xraysUrl": "$Extras.Aurora.xrays_url",
   "fluxUrl": "$Extras.Aurora.flux_url",
   "regionsUrl": "$Extras.Aurora.regions_url",
+  "kpForecastUrl": "$Extras.Aurora.kp_forecast_url",
   "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
   "snapshotRefreshSeconds": 0
 }
@@ -91,6 +92,15 @@
           <div class="card-body">
             <h5 class="card-title">Kp index, last 24 hours</h5>
             <div id="kp-chart"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 mb-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Kp forecast, next 3 days</h5>
+            <div id="kp-forecast-chart"></div>
+            <p id="kp-forecast-empty" class="text-muted mb-0" hidden>Forecast data unavailable.</p>
           </div>
         </div>
       </div>

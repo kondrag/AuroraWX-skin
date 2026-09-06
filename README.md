@@ -89,6 +89,7 @@ Restart WeeWX. Point your browser at `public_html/aurora.html`.
 | `snapshot_refresh_seconds` | `30` | Client-side snapshot refresh |
 | `noaa_refresh_seconds` | `120` | Client-side NOAA refresh |
 | `kp_url`, `wind_url`, `mag_url`, `xrays_url`, `flux_url`, `regions_url` | NOAA SWPC feeds | Override for testing/offline |
+| `kp_forecast_url` | NOAA SWPC 3-day forecast | Override for testing/offline |
 
 NeoWX Material options (`[Extras][[Appearance]]`, `[[Charts]]`,
 `[[Translations]]`, …) all work unchanged; see the upstream README.

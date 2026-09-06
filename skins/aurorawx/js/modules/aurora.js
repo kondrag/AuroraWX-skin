@@ -15,6 +15,7 @@
   var page = cfg.page || '';
 
   var kpChart = null;
+  var kpForecastChart = null;
 
   var QUIET = '#43a047', MODERATE = '#fdd835', ELEVATED = '#fb8c00', STORM = '#e53935';
 
@@ -64,6 +65,13 @@
     return { text: 'QUIET', color: QUIET };
   }
 
+  function kpThresholdColor(kp) {
+    if (kp >= 5) return STORM;
+    if (kp >= 4) return ELEVATED;
+    if (kp >= 3) return MODERATE;
+    return QUIET;
+  }
+
   function renderStatus(kpSeries, bz, wind) {
     var kp = kpSeries.length ? kpSeries[kpSeries.length - 1].kp : null;
     var b = badgeFor(kp === null ? -1 : kp, bz === null ? 0 : bz);
@@ -88,9 +96,7 @@
     var cutoff = Date.now() - 24 * 3600 * 1000;
     var data = kpSeries.filter(function (p) { return p.t >= cutoff; })
       .map(function (p) {
-        return { x: p.t, y: p.kp,
-                 fillColor: p.kp >= 5 ? STORM : p.kp >= 4 ? ELEVATED
-                          : p.kp >= 3 ? MODERATE : QUIET };
+        return { x: p.t, y: p.kp, fillColor: kpThresholdColor(p.kp) };
       });
     if (kpChart) {
       kpChart.destroy();
@@ -106,6 +112,49 @@
       series: [{ name: 'Kp', data: data }]
     });
     kpChart.render();
+  }
+
+  function normalizeKpForecast(j) {
+    var rows = Array.isArray(j) ? j : [];
+    var now = Date.now();
+    var pts = [];
+    rows.forEach(function (e) {
+      if (!e || e.observed === 'observed' || e.kp === null || e.kp === undefined) return;
+      var t = new Date(String(e.time_tag).replace(' ', 'T') +
+                       (/[Zz]$/.test(String(e.time_tag)) ? '' : 'Z')).getTime();
+      if (!isFinite(t) || t < now - 3 * 3600 * 1000) return;
+      pts.push({ t: t, v: Number(e.kp) });
+    });
+    pts.sort(function (a, b) { return a.t - b.t; });
+    return pts.slice(0, 25);
+  }
+
+  function renderKpForecastChart(series) {
+    var el = document.getElementById('kp-forecast-chart');
+    var empty = document.getElementById('kp-forecast-empty');
+    if (!el) return;
+    if (!window.ApexCharts || !series.length) {
+      if (empty) empty.hidden = false;
+      return;
+    }
+    if (empty) empty.hidden = true;
+    if (kpForecastChart) {
+      kpForecastChart.destroy();
+      kpForecastChart = null;
+    }
+    var data = series.map(function (p) {
+      return { x: p.t, y: p.v, fillColor: kpThresholdColor(p.v) };
+    });
+    kpForecastChart = new ApexCharts(el, {
+      chart: { type: 'bar', height: 220, animations: { enabled: false } },
+      theme: { mode: window.theme_mode || 'dark' },
+      plotOptions: { bar: { columnWidth: '90%' } },
+      dataLabels: { enabled: false },
+      xaxis: { type: 'datetime' },
+      yaxis: { min: 0, max: 9, tickAmount: 9 },
+      series: [{ name: 'Kp forecast', data: data }]
+    });
+    kpForecastChart.render();
   }
 
   function xrayClass(flux) {
@@ -150,6 +199,13 @@
       renderStatus(res[0], bz, wind);
       if (page === 'aurora' || page === 'solar') renderKpChart(res[0]);
     });
+
+    if (page === 'solar' && cfg.kpForecastUrl) {
+      fetchJson(cfg.kpForecastUrl)
+        .then(normalizeKpForecast)
+        .then(renderKpForecastChart)
+        .catch(function () { renderKpForecastChart([]); });
+    }
 
     if (page === 'solar') {
       fetchJson(cfg.xraysUrl).then(function (j) {

@@ -34,6 +34,7 @@ check "$OUT/aurora.html" 'id="kp-chart"'
 check "$OUT/index.html" 'aurora-status-card'
 check "$OUT/gallery.html" 'video/mp4'
 check "$OUT/solar.html" 'regions-tbody'
+check "$OUT/solar.html" 'kp-forecast-chart'
 
 run_scenario partial
 check "$OUT/aurora.html" 'stale data'
