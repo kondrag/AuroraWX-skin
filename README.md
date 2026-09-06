@@ -115,6 +115,13 @@ without the daemon (it ignores `report_timing`).
 `tools/gen_install.py` regenerates the file manifest in `install.py`;
 run it after adding/removing skin files; `tests/test_install.py` enforces it.
 
+### Building the package
+
+    git ls-files install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz --transform 's#^#aurorawx/#'
+
+The archive must contain a single top-level `aurorawx/` directory (WeeWX
+derives the install path from the archive's common prefix).
+
 ## Troubleshooting
 
 - Pages missing after a report run, with a `ValueError` in the log mentioning

@@ -2135,11 +2135,13 @@ git commit -m "feat: extension installer with generated manifest and README"
 - [ ] **Step 1: Build the package**
 
 ```bash
-git ls-files install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz
+git ls-files install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz --transform 's#^#aurorawx/#'
 tar tzf dist/aurorawx-1.0.0.tar.gz | head
 ```
 
-Expected: archive lists `install.py`, `bin/user/aurorawx/*`, `skins/aurorawx/*` and nothing else.
+Expected: archive lists `install.py`, `bin/user/aurorawx/*`, `skins/aurorawx/*` and nothing
+else, all under a single `aurorawx/` root (weectl derives the install path from the
+archive's common prefix; a multi-root archive is rejected with "no common path").
 
 - [ ] **Step 2: Create a scratch WeeWX root for the install test**
 
