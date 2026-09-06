@@ -123,7 +123,9 @@
       var t = new Date(String(e.time_tag).replace(' ', 'T') +
                        (/[Zz]$/.test(String(e.time_tag)) ? '' : 'Z')).getTime();
       if (!isFinite(t) || t < now - 3 * 3600 * 1000) return;
-      pts.push({ t: t, v: Number(e.kp) });
+      var v = Number(e.kp);
+      if (!isFinite(v) || String(e.kp).trim() === '') return;
+      pts.push({ t: t, v: v });
     });
     pts.sort(function (a, b) { return a.t - b.t; });
     return pts.slice(0, 25);
@@ -134,6 +136,7 @@
     var empty = document.getElementById('kp-forecast-empty');
     if (!el) return;
     if (!window.ApexCharts || !series.length) {
+      if (kpForecastChart) { kpForecastChart.destroy(); kpForecastChart = null; }
       if (empty) empty.hidden = false;
       return;
     }
