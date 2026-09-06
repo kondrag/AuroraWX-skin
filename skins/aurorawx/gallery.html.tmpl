@@ -35,12 +35,14 @@
       </div>
     </div>
   #else
+    #if $aurora.days
     <div class="row my-4">
       <div class="col-12">
-        <h4>$Extras.Translations[$Extras.language].gallery
-          <small class="text-muted ml-2">last $len($aurora.days) days</small></h4>
+        <h3 class="h5-responsive $Extras.color-text">$Extras.Translations[$Extras.language].gallery
+          <small class="text-muted ml-2">last $len($aurora.days) days</small></h3>
       </div>
     </div>
+    #end if
 
     #for $day in $aurora.days
     <div class="row my-3">
@@ -49,7 +51,9 @@
           <div class="card-body">
             <h5 class="card-title">$day.day_name
               <small class="text-muted ml-2">$day.date_iso
-                #if $day.is_today <span class="badge badge-info ml-1">today</span> #end if
+                #if $day.is_today
+                <span class="badge badge-info ml-1">today</span>
+                #end if
               </small>
             </h5>
             <div class="row">
@@ -80,7 +84,7 @@
               #if $day.spaceweather
               <div class="col-12">
                 <h6>Space weather (3-day Kp)</h6>
-                <img src="$day.spaceweather" class="img-fluid rounded"
+                <img src="$day.spaceweather" class="img-fluid rounded" loading="lazy"
                      alt="Kp history $day.date_iso">
               </div>
               #end if
