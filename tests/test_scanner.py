@@ -80,7 +80,114 @@ def test_empty_dir_is_no_data(tmp_path):
 def test_missing_dir_does_not_raise(tmp_path):
     r = scanner.scan_directory(tmp_path / "nope", now_ts=NOW)
     assert r["status"] == scanner.NO_DATA
+    assert r["enabled"] is True
     assert "error" in r
+    assert r["cam_dir"] == str(tmp_path / "nope")
+
+
+def test_none_cam_dir_does_not_raise():
+    r = scanner.scan_directory(None, now_ts=NOW)
+    assert r["status"] == scanner.NO_DATA
+    assert r["enabled"] is True
+    assert "error" in r
+
+
+def test_vanished_file_is_skipped(tmp_path, monkeypatch):
+    good = tmp_path / "AuroraCam_Monday.mp4"
+    make(good)
+    doomed_name = day_file_name(scanner.AURORA_PREFIX, ".mp4", NOW - 3600)
+    doomed = tmp_path / doomed_name
+    make(doomed)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    # simulate the race: isfile() says the doomed file exists, then it
+    # vanishes (stat raises) before _media_entry can read it
+    real_isfile = os.path.isfile
+    real_stat = os.stat
+
+    def flaky_isfile(p):
+        return True if p == str(doomed) else real_isfile(p)
+
+    def flaky_stat(p, *args, **kwargs):
+        if p == str(doomed):
+            raise FileNotFoundError(p)
+        return real_stat(p, *args, **kwargs)
+
+    monkeypatch.setattr(scanner.os.path, "isfile", flaky_isfile)
+    monkeypatch.setattr(scanner.os, "stat", flaky_stat)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert "error" not in r
+    urls = [e["url"] for e in r["aurora_videos"]]
+    assert good.name in urls
+    assert doomed_name not in urls
+
+
+def test_malformed_publish_time_uses_default(tmp_path):
+    seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
+    lt = time.localtime(NOW)
+    nine_am = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 9, 0, 0, 0, 0, -1))
+    make(tmp_path / "snapshot.jpg", mtime=nine_am - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=nine_am, night_publish_by="bogus")
+    assert r["status"] == scanner.ENCODING
+
+
+def test_out_of_range_publish_time_falls_back(tmp_path):
+    seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
+    lt = time.localtime(NOW)
+    nine_am = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 9, 0, 0, 0, 0, -1))
+    make(tmp_path / "snapshot.jpg", mtime=nine_am - 60)
+    # "25:00" is invalid; must fall back to the 07:00 default, not parse as 25h
+    r = scanner.scan_directory(tmp_path, now_ts=nine_am, night_publish_by="25:00")
+    assert r["status"] == scanner.ENCODING
+
+
+def test_today_video_is_flagged_and_in_days(tmp_path):
+    seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
+    lt = time.localtime(NOW)
+    noon = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 12, 0, 0, 0, 0, -1))
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", noon)
+    make(tmp_path / name, mtime=noon)
+    make(tmp_path / "snapshot.jpg", mtime=noon - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=noon + 60)
+    e = r["aurora_videos"][0]
+    assert e["is_today"] is True
+    today = [d for d in r["days"] if d["is_today"]]
+    assert len(today) == 1
+    assert today[0]["aurora_video"] == name
+
+
+def test_both_today_videos_present_after_day_publish_is_ok(tmp_path):
+    seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
+    seed_week(tmp_path, scanner.CLOUD_PREFIX, ".mp4")
+    lt = time.localtime(NOW)
+    noon = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 12, 0, 0, 0, 0, -1))
+    make(tmp_path / day_file_name(scanner.AURORA_PREFIX, ".mp4", noon), mtime=noon)
+    make(tmp_path / day_file_name(scanner.CLOUD_PREFIX, ".mp4", noon), mtime=noon)
+    eight_pm = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 20, 0, 0, 0, 0, -1))
+    make(tmp_path / "snapshot.jpg", mtime=eight_pm - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=eight_pm)
+    assert r["status"] == scanner.OK
+
+
+def test_snapshot_boundary_age_not_stale(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 30 * 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW, stale_minutes=30)
+    assert r["snapshot"]["age_minutes"] == 30
+    assert r["snapshot"]["is_stale"] is False
+    assert r["status"] != scanner.STALE
+
+
+def test_days_slot_newest_wins_on_duplicate_date(tmp_path):
+    older = NOW - 2 * 86400 + 3600
+    newer = older + 3600  # same local date as older, later mtime
+    older_name = day_file_name(scanner.AURORA_PREFIX, ".mp4", older)
+    newer_name = older_name[:-len(".mp4")] + "_2.mp4"
+    make(tmp_path / older_name, mtime=older)
+    make(tmp_path / newer_name, mtime=newer)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert len(r["aurora_videos"]) == 2
+    assert len(r["days"]) == 1
+    assert r["days"][0]["aurora_video"] == newer_name
 
 
 def test_missing_today_video_after_publish_is_encoding(tmp_path):

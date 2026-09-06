@@ -32,9 +32,12 @@ OK = "ok"
 def _parse_hhmm(value, default_minutes):
     try:
         hh, mm = value.split(":")
-        return int(hh) * 60 + int(mm)
+        hh, mm = int(hh), int(mm)
     except (ValueError, AttributeError):
         return default_minutes
+    if not (0 <= hh <= 23 and 0 <= mm <= 59):
+        return default_minutes
+    return hh * 60 + mm
 
 
 def _local_minutes_of_day(now_ts):
@@ -50,7 +53,7 @@ def _media_entry(path, now_ts, today_iso):
         "mtime": int(st.st_mtime),
         "size_mb": round(st.st_size / (1024.0 * 1024.0), 1),
         "date_iso": time.strftime("%Y-%m-%d", lt),
-        "day_name": time.strftime("%A", lt),
+        "day_name": DAYS[lt.tm_wday],
         "is_today": time.strftime("%Y-%m-%d", lt) == today_iso,
         "age_hours": round(max(0, now_ts - st.st_mtime) / 3600.0, 1),
     }
@@ -70,7 +73,7 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
     today_iso = time.strftime("%Y-%m-%d", time.localtime(now_ts))
     result = {
         "enabled": True,
-        "cam_dir": cam_dir,
+        "cam_dir": str(cam_dir),
         "status": NO_DATA,
         "snapshot": {"exists": False, "url": SNAPSHOT_NAME, "mtime": None,
                      "age_minutes": None, "is_stale": True},
@@ -79,6 +82,9 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
         "spaceweather": [],
         "days": [],
     }
+    if not cam_dir:
+        result["error"] = "camera directory not configured"
+        return result
     try:
         snapshot_path = os.path.join(cam_dir, SNAPSHOT_NAME)
         if os.path.isfile(snapshot_path):
@@ -93,12 +99,17 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
             path = os.path.join(cam_dir, name)
             if not os.path.isfile(path):
                 continue
-            if name.startswith(AURORA_PREFIX) and name.endswith(".mp4"):
-                result["aurora_videos"].append(_media_entry(path, now_ts, today_iso))
-            elif name.startswith(CLOUD_PREFIX) and name.endswith(".mp4"):
-                result["cloud_videos"].append(_media_entry(path, now_ts, today_iso))
-            elif name.startswith(SPACEWEATHER_PREFIX) and name.endswith(".gif"):
-                result["spaceweather"].append(_media_entry(path, now_ts, today_iso))
+            # a file may vanish (or briefly lock) between isfile and stat;
+            # skip it instead of aborting the whole report
+            try:
+                if name.startswith(AURORA_PREFIX) and name.endswith(".mp4"):
+                    result["aurora_videos"].append(_media_entry(path, now_ts, today_iso))
+                elif name.startswith(CLOUD_PREFIX) and name.endswith(".mp4"):
+                    result["cloud_videos"].append(_media_entry(path, now_ts, today_iso))
+                elif name.startswith(SPACEWEATHER_PREFIX) and name.endswith(".gif"):
+                    result["spaceweather"].append(_media_entry(path, now_ts, today_iso))
+            except OSError:
+                continue
     except OSError as e:
         result["error"] = str(e)
         return result
@@ -107,6 +118,8 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
         result[key].sort(key=lambda e: e["mtime"], reverse=True)
 
     # Combined per-day view (rolling week), newest first.
+    # slots: "spaceweather" holds the chart filename, not a video — the
+    # naming asymmetry with the *_video slots is intentional.
     slots = {"aurora_videos": "aurora_video", "cloud_videos": "cloud_video",
              "spaceweather": "spaceweather"}
     by_date = {}
@@ -116,7 +129,8 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
                 "date_iso": e["date_iso"], "day_name": e["day_name"],
                 "is_today": e["is_today"], "aurora_video": None,
                 "cloud_video": None, "spaceweather": None})
-            day[slot] = e["url"]
+            if day[slot] is None:  # lists iterate newest-first: keep newest
+                day[slot] = e["url"]
     result["days"] = sorted(by_date.values(),
                             key=lambda d: d["date_iso"], reverse=True)
 
