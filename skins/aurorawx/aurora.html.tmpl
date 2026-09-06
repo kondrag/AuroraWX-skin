@@ -17,18 +17,6 @@
 #attr $active_nav = 'aurora'
 #include "header.inc"
 
-<script type="application/json" id="aurora-config">
-{
-  "page": "aurora",
-  "kpUrl": "$Extras.Aurora.kp_url",
-  "windUrl": "$Extras.Aurora.wind_url",
-  "magUrl": "$Extras.Aurora.mag_url",
-  "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
-  "snapshotRefreshSeconds": $int($Extras.Aurora.snapshot_refresh_seconds),
-  "snapshotUrl": "$aurora.snapshot.url"
-}
-</script>
-
 <main data-aurora-page="aurora">
   <div class="container-fluid d-flex-xxl">
 
@@ -48,7 +36,19 @@
     </div>
   #else
 
-    <!-- Hero: live all-sky image -->
+    <script type="application/json" id="aurora-config">
+    {
+      "page": "aurora",
+      "kpUrl": "$Extras.Aurora.kp_url",
+      "windUrl": "$Extras.Aurora.wind_url",
+      "magUrl": "$Extras.Aurora.mag_url",
+      "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
+      "snapshotRefreshSeconds": $int($Extras.Aurora.snapshot_refresh_seconds),
+      "snapshotUrl": "$aurora.snapshot.url"
+    }
+    </script>
+
+    ## Hero: live all-sky image
     <div class="row my-4">
       <div class="col-12">
         <div class="card aurora-hero">
@@ -61,7 +61,11 @@
           </div>
           #end if
           <div class="aurora-hero-overlay">
+            #if $aurora.snapshot.exists and not $aurora.snapshot.is_stale
             <span class="badge badge-danger live-badge">Live</span>
+            #elif $aurora.snapshot.exists
+            <span class="badge badge-warning">stale</span>
+            #end if
             <span class="ml-2 text-white-50" id="snapshot-age">
               #if $aurora.snapshot.exists
               updated $aurora.snapshot.age_minutes min ago
@@ -74,7 +78,7 @@
       </div>
     </div>
 
-    <!-- Activity cards -->
+    ## Activity cards
     <div class="row my-4">
       <div class="col-6 col-md-3 mb-3">
         <div class="card text-center">
@@ -110,7 +114,7 @@
       </div>
     </div>
 
-    <!-- Viewing conditions + Kp chart -->
+    ## Viewing conditions + Kp chart
     <div class="row my-4">
       <div class="col-12 col-lg-6 mb-3">
         <div class="card h-100">
@@ -120,10 +124,10 @@
               <tr><td>Temperature</td><td class="text-right">$current.outTemp</td></tr>
               <tr><td>Humidity</td><td class="text-right">$current.outHumidity</td></tr>
               <tr><td>Wind</td><td class="text-right">$current.windSpeed $current.windDir.ordinal_compass</td></tr>
-              <tr><td>Moon</td><td class="text-right">$almanac.moon_phase ($almanac.moon_fullness)</td></tr>
+              <tr><td>Moon</td><td class="text-right">$almanac.moon_phase ($almanac.moon_fullness%)</td></tr>
               #if $almanac.hasExtras
-              <tr><td>Astro dusk</td><td class="text-right">$almanac(horizon=-6).sun.set</td></tr>
-              <tr><td>Astro dawn</td><td class="text-right">$almanac(horizon=-6).sun.rise</td></tr>
+              <tr><td>Astro dusk</td><td class="text-right">$almanac(horizon=-18).sun.set</td></tr>
+              <tr><td>Astro dawn</td><td class="text-right">$almanac(horizon=-18).sun.rise</td></tr>
               #end if
             </table>
           </div>
@@ -139,7 +143,7 @@
       </div>
     </div>
 
-    <!-- Pipeline status + links -->
+    ## Pipeline status + links
     <div class="row mb-4">
       <div class="col-12">
         <div class="card">
@@ -156,8 +160,8 @@
               <span class="badge badge-secondary">no data</span>
               #end if
             </div>
-            <a class="btn btn-outline-light btn-sm mr-2" href="gallery.html">Timelapse gallery</a>
-            <a class="btn btn-outline-light btn-sm" href="solar.html">Solar activity</a>
+            <a class="btn btn-$Extras.color btn-sm mr-2" href="gallery.html">Timelapse gallery</a>
+            <a class="btn btn-$Extras.color btn-sm" href="solar.html">Solar activity</a>
           </div>
         </div>
       </div>
@@ -170,7 +174,9 @@
 
 #include "footer.inc"
 #include "js.inc"
+#if $aurora.enabled
 <script src="js/modules/aurora.js"></script>
+#end if
 
 </body>
 </html>
