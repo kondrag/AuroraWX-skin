@@ -1,0 +1,176 @@
+#encoding UTF-8
+## +-------------------------------------------------------------------------+
+## |    aurora.html.tmpl                 Template file for "aurora" page     |
+## +-------------------------------------------------------------------------+
+
+<!DOCTYPE html>
+<html lang="$Extras.language">
+<head>
+  <title>
+    $Extras.Translations[$Extras.language].aurora | $station.location
+  </title>
+  #include "head.inc"
+  <link rel="stylesheet" href="css/aurora.css">
+</head>
+<body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
+
+#attr $active_nav = 'aurora'
+#include "header.inc"
+
+<script type="application/json" id="aurora-config">
+{
+  "page": "aurora",
+  "kpUrl": "$Extras.Aurora.kp_url",
+  "windUrl": "$Extras.Aurora.wind_url",
+  "magUrl": "$Extras.Aurora.mag_url",
+  "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
+  "snapshotRefreshSeconds": $int($Extras.Aurora.snapshot_refresh_seconds),
+  "snapshotUrl": "$aurora.snapshot.url"
+}
+</script>
+
+<main data-aurora-page="aurora">
+  <div class="container-fluid d-flex-xxl">
+
+  #if not $aurora.enabled
+    <div class="row my-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <h5 class="card-title">$Extras.Translations[$Extras.language].aurora</h5>
+            <p class="card-text mb-0">
+              Aurora section is disabled. Set <code>cam_dir</code> under
+              <code>[Extras][[Aurora]]</code> to enable it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  #else
+
+    <!-- Hero: live all-sky image -->
+    <div class="row my-4">
+      <div class="col-12">
+        <div class="card aurora-hero">
+          #if $aurora.snapshot.exists
+          <img id="snapshot-img" src="$aurora.snapshot.url" class="aurora-hero-img"
+               alt="Live all-sky camera">
+          #else
+          <div class="aurora-placeholder d-flex align-items-center justify-content-center">
+            <span class="text-muted">No camera image available</span>
+          </div>
+          #end if
+          <div class="aurora-hero-overlay">
+            <span class="badge badge-danger live-badge">Live</span>
+            <span class="ml-2 text-white-50" id="snapshot-age">
+              #if $aurora.snapshot.exists
+              updated $aurora.snapshot.age_minutes min ago
+              #else
+              no image
+              #end if
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity cards -->
+    <div class="row my-4">
+      <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="kp-now">&mdash;</div>
+            <div class="text-muted">Kp index</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="py-2"><span class="badge aurora-badge" id="aurora-badge">&hellip;</span></div>
+            <div class="text-muted">Activity</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="bz-now">&mdash;</div>
+            <div class="text-muted">Bz (nT)</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-4" id="wind-now">&mdash;</div>
+            <div class="text-muted">Solar wind (km/s)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewing conditions + Kp chart -->
+    <div class="row my-4">
+      <div class="col-12 col-lg-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Viewing conditions</h5>
+            <table class="table table-sm mb-0">
+              <tr><td>Temperature</td><td class="text-right">$current.outTemp</td></tr>
+              <tr><td>Humidity</td><td class="text-right">$current.outHumidity</td></tr>
+              <tr><td>Wind</td><td class="text-right">$current.windSpeed $current.windDir.ordinal_compass</td></tr>
+              <tr><td>Moon</td><td class="text-right">$almanac.moon_phase ($almanac.moon_fullness)</td></tr>
+              #if $almanac.hasExtras
+              <tr><td>Astro dusk</td><td class="text-right">$almanac(horizon=-6).sun.set</td></tr>
+              <tr><td>Astro dawn</td><td class="text-right">$almanac(horizon=-6).sun.rise</td></tr>
+              #end if
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Kp index, last 24 hours</h5>
+            <div id="kp-chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline status + links -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body d-flex flex-wrap align-items-center">
+            <div class="mr-auto">
+              <span class="text-muted mr-2">Archive status:</span>
+              #if $aurora.status == 'ok'
+              <span class="badge badge-success">up to date</span>
+              #elif $aurora.status == 'stale'
+              <span class="badge badge-warning">stale data</span>
+              #elif $aurora.status == 'encoding'
+              <span class="badge badge-info">tonight's timelapse still encoding</span>
+              #else
+              <span class="badge badge-secondary">no data</span>
+              #end if
+            </div>
+            <a class="btn btn-outline-light btn-sm mr-2" href="gallery.html">Timelapse gallery</a>
+            <a class="btn btn-outline-light btn-sm" href="solar.html">Solar activity</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  #end if
+
+  </div>
+</main>
+
+#include "footer.inc"
+#include "js.inc"
+<script src="js/modules/aurora.js"></script>
+
+</body>
+</html>
