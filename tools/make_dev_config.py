@@ -7,7 +7,8 @@ import configobj
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_ROOT = os.path.join(ROOT, "dev-weewx", "weewx-data")
-SRC = "/home/greg/workspace/weewx/src/weewx_data/weewx.conf"
+SRC = os.environ.get("WEEWX_SRC", "/home/greg/workspace/weewx")
+STOCK_CONF = os.path.join(SRC, "src", "weewx_data", "weewx.conf")
 
 SCENARIOS = {
     "full": os.path.join(ROOT, "fixtures", "cam_dir", "full"),
@@ -20,14 +21,14 @@ SCENARIOS = {
 def main():
     os.makedirs(os.path.join(DATA_ROOT, "archive"), exist_ok=True)
     for scenario, cam_dir in SCENARIOS.items():
-        conf = configobj.ConfigObj(SRC)
+        conf = configobj.ConfigObj(STOCK_CONF)
         conf["WEEWX_ROOT"] = DATA_ROOT
         conf["Station"]["location"] = "Aurora Test Site"
         conf["Station"]["latitude"] = "45.0"
         conf["Station"]["longitude"] = "-93.0"
         conf["Station"]["altitude"] = ["300", "meter"]
         for report in ("StandardReport", "SmartphoneReport", "MobileReport",
-                       "Ftp", "RSYNC"):
+                       "Ftp", "FTP", "RSYNC"):
             if report in conf["StdReport"]:
                 conf["StdReport"][report]["enable"] = "false"
         conf["StdReport"]["AuroraWXReport"] = {

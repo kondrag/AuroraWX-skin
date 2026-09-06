@@ -1,5 +1,7 @@
 #!/bin/sh
 # Create the camera-directory fixtures used by the offline report tests.
+# Requires GNU coreutils (date -d / touch -d). Fixture ages matter: the full
+# scenario expects reports to run within ~30 min of fixture creation.
 set -e
 cd "$(dirname "$0")/.."
 FIX=fixtures/cam_dir
