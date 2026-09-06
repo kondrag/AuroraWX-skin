@@ -73,7 +73,7 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
     today_iso = time.strftime("%Y-%m-%d", time.localtime(now_ts))
     result = {
         "enabled": True,
-        "cam_dir": str(cam_dir),
+        "cam_dir": str(cam_dir) if cam_dir else "",
         "status": NO_DATA,
         "snapshot": {"exists": False, "url": SNAPSHOT_NAME, "mtime": None,
                      "age_minutes": None, "is_stale": True},
@@ -87,14 +87,19 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
         return result
     try:
         snapshot_path = os.path.join(cam_dir, SNAPSHOT_NAME)
-        if os.path.isfile(snapshot_path):
-            st = os.stat(snapshot_path)
-            age_minutes = int(max(0, now_ts - st.st_mtime) // 60)
-            result["snapshot"] = {
-                "exists": True, "url": SNAPSHOT_NAME, "mtime": int(st.st_mtime),
-                "age_minutes": age_minutes,
-                "is_stale": age_minutes > stale_minutes,
-            }
+        # the snapshot may vanish between isfile and stat; degrade to the
+        # default (missing, stale) instead of aborting the whole report
+        try:
+            if os.path.isfile(snapshot_path):
+                st = os.stat(snapshot_path)
+                age_minutes = int(max(0, now_ts - st.st_mtime) // 60)
+                result["snapshot"] = {
+                    "exists": True, "url": SNAPSHOT_NAME, "mtime": int(st.st_mtime),
+                    "age_minutes": age_minutes,
+                    "is_stale": age_minutes > stale_minutes,
+                }
+        except OSError:
+            pass
         for name in sorted(os.listdir(cam_dir)):
             path = os.path.join(cam_dir, name)
             if not os.path.isfile(path):

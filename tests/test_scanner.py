@@ -90,6 +90,7 @@ def test_none_cam_dir_does_not_raise():
     assert r["status"] == scanner.NO_DATA
     assert r["enabled"] is True
     assert "error" in r
+    assert r["cam_dir"] == ""
 
 
 def test_vanished_file_is_skipped(tmp_path, monkeypatch):
@@ -119,6 +120,34 @@ def test_vanished_file_is_skipped(tmp_path, monkeypatch):
     urls = [e["url"] for e in r["aurora_videos"]]
     assert good.name in urls
     assert doomed_name not in urls
+
+
+def test_vanished_snapshot_is_skipped(tmp_path, monkeypatch):
+    good = tmp_path / "AuroraCam_Monday.mp4"
+    make(good)
+    snap = str(tmp_path / "snapshot.jpg")
+    # simulate the race: isfile() says the snapshot exists, then it
+    # vanishes (stat raises) before it can be read
+    real_isfile = os.path.isfile
+    real_stat = os.stat
+
+    def flaky_isfile(p):
+        return True if p == snap else real_isfile(p)
+
+    def flaky_stat(p, *args, **kwargs):
+        if p == snap:
+            raise FileNotFoundError(p)
+        return real_stat(p, *args, **kwargs)
+
+    monkeypatch.setattr(scanner.os.path, "isfile", flaky_isfile)
+    monkeypatch.setattr(scanner.os, "stat", flaky_stat)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert "error" not in r
+    assert r["snapshot"]["exists"] is False
+    assert r["snapshot"]["is_stale"] is True
+    assert [e["url"] for e in r["aurora_videos"]] == [good.name]
+    # missing snapshot degrades to the stale default
+    assert r["status"] == scanner.STALE
 
 
 def test_malformed_publish_time_uses_default(tmp_path):
