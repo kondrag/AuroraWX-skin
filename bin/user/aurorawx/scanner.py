@@ -127,10 +127,14 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
     elif result["snapshot"]["is_stale"]:
         result["status"] = STALE
     else:
-        night_limit = _parse_hhmm(night_publish_by, 7 * 60)
-        after_publish = _local_minutes_of_day(now_ts) >= night_limit
-        today_done = any(e["is_today"] for e in result["aurora_videos"])
-        result["status"] = ENCODING if (after_publish and not today_done) else OK
+        today_aurora = any(e["is_today"] for e in result["aurora_videos"])
+        today_cloud = any(e["is_today"] for e in result["cloud_videos"])
+        minutes = _local_minutes_of_day(now_ts)
+        night_pending = (minutes >= _parse_hhmm(night_publish_by, 7 * 60)
+                         and not today_aurora)
+        day_pending = (minutes >= _parse_hhmm(day_publish_by, 19 * 60)
+                       and not today_cloud)
+        result["status"] = ENCODING if (night_pending or day_pending) else OK
     return result
 
 

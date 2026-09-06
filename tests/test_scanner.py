@@ -93,6 +93,19 @@ def test_missing_today_video_after_publish_is_encoding(tmp_path):
     assert r["status"] == scanner.ENCODING
 
 
+def test_missing_today_cloud_video_after_day_publish_is_encoding(tmp_path):
+    seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
+    # today's aurora video is done, so the night branch must not fire
+    lt = time.localtime(NOW)
+    noon = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 12, 0, 0, 0, 0, -1))
+    make(tmp_path / day_file_name(scanner.AURORA_PREFIX, ".mp4", noon), mtime=noon)
+    # 20:00 local on the "now" day: past day_publish_by, today's cloud video missing
+    eight_pm = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 20, 0, 0, 0, 0, -1))
+    make(tmp_path / "snapshot.jpg", mtime=eight_pm - 60)  # live at scan time
+    r = scanner.scan_directory(tmp_path, now_ts=eight_pm)
+    assert r["status"] == scanner.ENCODING
+
+
 def test_stale_snapshot_outranks_encoding(tmp_path):
     seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
     lt = time.localtime(NOW)
