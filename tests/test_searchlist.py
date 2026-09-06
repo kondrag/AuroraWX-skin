@@ -1,5 +1,6 @@
 import configobj
 
+from user.aurorawx import scanner
 from user.aurorawx.searchlist import AuroraSearchList
 from test_scanner import NOW, day_file_name, make
 
@@ -38,3 +39,26 @@ def test_io_error_is_contained():
     aurora = make_sle("/definitely/not/a/real/dir").get_extension_list(None, None)[0]["aurora"]
     assert aurora["enabled"] is True
     assert aurora["status"] == "no_data"
+
+
+def test_garbage_config_does_not_raise_at_construction():
+    cfg = configobj.ConfigObj()
+    cfg["Extras"] = {"Aurora": {"stale_after_minutes": "abc"}}
+    sle = AuroraSearchList(FakeGenerator(cfg))
+    assert sle.stale_minutes == 30
+    scalar_cfg = configobj.ConfigObj()
+    scalar_cfg["Extras"] = "not-a-section"
+    sle2 = AuroraSearchList(FakeGenerator(scalar_cfg))
+    assert sle2.get_extension_list(None, None)[0]["aurora"]["enabled"] is False
+
+
+def test_scanner_crash_is_contained(monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated scanner crash")
+    monkeypatch.setattr(scanner, "scan_directory", boom)
+    aurora = make_sle("/tmp").get_extension_list(None, None)[0]["aurora"]
+    assert aurora["enabled"] is True
+    assert aurora["status"] == "no_data"
+    assert "error" in aurora
+    for key in ("snapshot", "aurora_videos", "cloud_videos", "spaceweather", "days"):
+        assert key in aurora

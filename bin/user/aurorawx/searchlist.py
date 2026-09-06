@@ -7,7 +7,7 @@ Registered in skins/aurorawx/skin.conf:
 
 The package lives in the WeeWX user directory (bin/user). WeeWX puts bin/
 (the parent of the user directory) on sys.path, hence the "user." prefix on
-imports. get_extension_list() can never raise:
+imports. Neither construction nor get_extension_list() can raise:
 any failure degrades to a no_data/disabled state (spec section 4).
 """
 
@@ -21,10 +21,13 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
     def __init__(self, generator):
         weewx.cheetahgenerator.SearchList.__init__(self, generator)
         extras = self.generator.skin_dict.get("Extras", {})
-        cfg = extras.get("Aurora", {})
+        cfg = extras.get("Aurora", {}) if hasattr(extras, "get") else {}
         self.cam_dir = str(cfg.get("cam_dir", "") or "")
         self.cam_url = str(cfg.get("cam_url", "") or "").rstrip("/")
-        self.stale_minutes = int(float(cfg.get("stale_after_minutes", 30)))
+        try:
+            self.stale_minutes = int(float(cfg.get("stale_after_minutes", 30)))
+        except (ValueError, TypeError, OverflowError):
+            self.stale_minutes = 30
         self.night_publish_by = str(cfg.get("night_publish_by", "07:00"))
         self.day_publish_by = str(cfg.get("day_publish_by", "19:00"))
 
