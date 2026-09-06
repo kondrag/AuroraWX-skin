@@ -157,7 +157,7 @@ Find the `[[[camera]]]` block inside `[[ToDate]]` and replace it with:
 - [ ] **Step 6: SLE registration — `skin.conf`, directly under `[CheetahGenerator]` (before its first subsection)**
 
 ```ini
-    search_list_extensions = aurorawx.searchlist.AuroraSearchList
+    search_list_extensions = user.aurorawx.searchlist.AuroraSearchList
 ```
 
 - [ ] **Step 7: Translations — `skin.conf`, `[Extras][[Translations]]`**
@@ -219,7 +219,7 @@ Append the same three lines with the same English values to every other language
 grep -ri camera skins/aurorawx --include='*.tmpl' --include='*.inc' --include='skin.conf' || echo no-camera-refs
 ```
 
-Expected: `auroraWX /cam aurorawx.searchlist.AuroraSearchList` and `no-camera-refs`.
+Expected: `auroraWX /cam user.aurorawx.searchlist.AuroraSearchList` and `no-camera-refs`.
 
 - [ ] **Step 10: Commit**
 
@@ -254,7 +254,7 @@ __version__ = "1.0.0"
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin", "user"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -265,7 +265,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import os
 import time
 
-from aurorawx import scanner
+from user.aurorawx import scanner
 
 NOW = 1789000000  # fixed epoch; tests are timezone-independent by construction
 
@@ -396,7 +396,7 @@ def test_days_combined_view(tmp_path):
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `.venv/bin/pytest tests/test_scanner.py -v`
-Expected: ERROR — `ModuleNotFoundError: No module named 'aurorawx'`.
+Expected: ERROR — `ModuleNotFoundError: No module named 'user.aurorawx'`.
 
 - [ ] **Step 4: Implement `bin/user/aurorawx/scanner.py`**
 
@@ -568,7 +568,7 @@ git commit -m "feat: aurora asset scanner with rolling-week discovery and pipeli
 ```python
 import configobj
 
-from aurorawx.searchlist import AuroraSearchList
+from user.aurorawx.searchlist import AuroraSearchList
 from tests.test_scanner import NOW, day_file_name, make
 
 
@@ -614,7 +614,7 @@ ignores `timespan`/`db_lookup`, so `None` is fine.
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `.venv/bin/pytest tests/test_searchlist.py -v`
-Expected: FAIL/ERROR — `ModuleNotFoundError: No module named 'aurorawx.searchlist'`.
+Expected: FAIL/ERROR — `ModuleNotFoundError: No module named 'user.aurorawx.searchlist'`.
 
 - [ ] **Step 3: Implement `bin/user/aurorawx/searchlist.py`**
 
@@ -624,16 +624,17 @@ Expected: FAIL/ERROR — `ModuleNotFoundError: No module named 'aurorawx.searchl
 Registered in skins/aurorawx/skin.conf:
 
     [CheetahGenerator]
-        search_list_extensions = aurorawx.searchlist.AuroraSearchList
+        search_list_extensions = user.aurorawx.searchlist.AuroraSearchList
 
-The package lives in the WeeWX user directory (bin/user), which WeeWX puts
-on sys.path, so imports are absolute. get_extension_list() can never raise:
+The package lives in the WeeWX user directory (bin/user). WeeWX puts bin/
+(the parent of the user directory) on sys.path, hence the "user." prefix on
+imports. get_extension_list() can never raise:
 any failure degrades to a no_data/disabled state (spec section 4).
 """
 
 import weewx.cheetahgenerator
 
-from aurorawx import scanner
+from user.aurorawx import scanner
 
 
 class AuroraSearchList(weewx.cheetahgenerator.SearchList):
@@ -2218,7 +2219,7 @@ If anything is dirty, commit it with a descriptive message.
 
 **Placeholder scan:** none — every code step contains complete code; every run step has expected output.
 
-**Type consistency:** scanner keys (`status`, `snapshot.exists/age_minutes/is_stale`, `days[].aurora_video/cloud_video/spaceweather`, `*.url`) match between scanner.py (Task 3), searchlist.py (Task 4), templates (Tasks 6-9), and scenario greps (Task 10). SLE registration string `aurorawx.searchlist.AuroraSearchList` (Task 2 Step 6) matches the module path (Task 4). JS config keys (`kpUrl`, `snapshotUrl`, …) match the JSON blocks in Tasks 6/8/9. Installer name `aurorawx` matches the uninstall command in Task 12.
+**Type consistency:** scanner keys (`status`, `snapshot.exists/age_minutes/is_stale`, `days[].aurora_video/cloud_video/spaceweather`, `*.url`) match between scanner.py (Task 3), searchlist.py (Task 4), templates (Tasks 6-9), and scenario greps (Task 10). SLE registration string `user.aurorawx.searchlist.AuroraSearchList` (Task 2 Step 6) matches the module path (Task 4). JS config keys (`kpUrl`, `snapshotUrl`, …) match the JSON blocks in Tasks 6/8/9. Installer name `aurorawx` matches the uninstall command in Task 12.
 
 
 
