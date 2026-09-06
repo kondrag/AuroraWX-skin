@@ -46,7 +46,7 @@ Expected: no errors (pulls CT3, configobj, Pillow, ephem, PyMySQL, pyserial, pyu
 - [ ] **Step 3: Verify**
 
 ```bash
-.venv/bin/python -c "import weewx, CT3, configobj; print(weewx.__version__)"
+.venv/bin/python -c "import weewx, Cheetah.Template, configobj; print(weewx.__version__)"
 .venv/bin/weectl --help >/dev/null && echo weectl-ok
 ```
 
