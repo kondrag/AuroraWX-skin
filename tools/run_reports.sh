@@ -24,6 +24,10 @@ check() {
 
 sh tools/make_fixtures.sh
 
+# Sync the committed skin/package into the dev tree so the scenario runs
+# exercise the committed skin/package, not a stale dev-weewx copy.
+sh tools/sync_dev.sh
+
 run_scenario full
 check "$OUT/aurora.html" 'up to date'
 check "$OUT/aurora.html" 'id="kp-chart"'
