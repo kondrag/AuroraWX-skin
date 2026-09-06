@@ -121,9 +121,20 @@
           <div class="card-body">
             <h5 class="card-title">Viewing conditions</h5>
             <table class="table table-sm mb-0">
+              ## Omit rows for obs types the station does not report
+              #if $current.outTemp.has_data
               <tr><td>Temperature</td><td class="text-right">$current.outTemp</td></tr>
+              #end if
+              #if $current.outHumidity.has_data
               <tr><td>Humidity</td><td class="text-right">$current.outHumidity</td></tr>
-              <tr><td>Wind</td><td class="text-right">$current.windSpeed $current.windDir.ordinal_compass</td></tr>
+              #end if
+              #if $current.windSpeed.has_data
+              <tr><td>Wind</td><td class="text-right">$current.windSpeed
+                #if $current.windDir.has_data
+                $current.windDir.ordinal_compass
+                #end if
+              </td></tr>
+              #end if
               <tr><td>Moon</td><td class="text-right">$almanac.moon_phase ($almanac.moon_fullness%)</td></tr>
               #if $almanac.hasExtras
               <tr><td>Astro dusk</td><td class="text-right">$almanac(horizon=-18).sun.set</td></tr>
