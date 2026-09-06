@@ -6,8 +6,15 @@
 
   var cfgEl = document.getElementById('aurora-config');
   if (!cfgEl) return;
-  var cfg = JSON.parse(cfgEl.textContent);
+  var cfg;
+  try {
+    cfg = JSON.parse(cfgEl.textContent);
+  } catch (e) {
+    return;
+  }
   var page = cfg.page || '';
+
+  var kpChart = null;
 
   var QUIET = '#43a047', MODERATE = '#fdd835', ELEVATED = '#fb8c00', STORM = '#e53935';
 
@@ -63,11 +70,13 @@
     setText('kp-now', kp === null ? '\u2014' : kp.toFixed(1));
     setText('bz-now', bz === null ? '\u2014' : bz.toFixed(1));
     setText('wind-now', wind === null ? '\u2014' : String(Math.round(wind)));
-    setText('kp-peak', kpSeries.length
-      ? String(Math.max.apply(null, kpSeries.map(function (p) { return p.kp; })))
+    var cutoff = Date.now() - 24 * 3600 * 1000;
+    var recent = kpSeries.filter(function (p) { return p.t >= cutoff; });
+    setText('kp-peak', recent.length
+      ? String(Math.max.apply(null, recent.map(function (p) { return p.kp; })))
       : '\u2014');
     var badge = document.getElementById('aurora-badge');
-    if (badge) {
+    if (badge && kp !== null) {
       badge.textContent = b.text;
       badge.style.backgroundColor = b.color;
     }
@@ -83,7 +92,11 @@
                  fillColor: p.kp >= 5 ? STORM : p.kp >= 4 ? ELEVATED
                           : p.kp >= 3 ? MODERATE : QUIET };
       });
-    var chart = new ApexCharts(el, {
+    if (kpChart) {
+      kpChart.destroy();
+      kpChart = null;
+    }
+    kpChart = new ApexCharts(el, {
       chart: { type: 'bar', height: 220, animations: { enabled: false } },
       theme: { mode: window.theme_mode || 'dark' },
       plotOptions: { bar: { columnWidth: '90%' } },
@@ -92,7 +105,7 @@
       yaxis: { min: 0, max: 9, tickAmount: 9 },
       series: [{ name: 'Kp', data: data }]
     });
-    chart.render();
+    kpChart.render();
   }
 
   function xrayClass(flux) {
@@ -108,14 +121,28 @@
     var bz = null, wind = null;
     var kpPromise = fetchJson(cfg.kpUrl).then(normalizeKp)
       .catch(function () { return []; });
+    function freshEntry(j, maxAgeMs) {
+      var e = lastOf(j);
+      if (!e || !e.time_tag) return null;
+      var s = String(e.time_tag);
+      var t = new Date(s.replace(' ', 'T') + (/[Zz]$/.test(s) ? '' : 'Z')).getTime();
+      if (isNaN(t) || Date.now() - t > maxAgeMs) return null;
+      return e;
+    }
     var magPromise = cfg.magUrl
       ? fetchJson(cfg.magUrl)
-          .then(function (j) { bz = pick(lastOf(j), ['bz_gsm']); })
+          .then(function (j) {
+            var e = freshEntry(j, 60 * 60 * 1000);
+            bz = e ? pick(e, ['bz_gsm']) : null;
+          })
           .catch(function () {})
       : Promise.resolve();
     var windPromise = cfg.windUrl
       ? fetchJson(cfg.windUrl)
-          .then(function (j) { wind = pick(lastOf(j), ['proton_speed', 'speed']); })
+          .then(function (j) {
+            var e = freshEntry(j, 60 * 60 * 1000);
+            wind = e ? pick(e, ['proton_speed', 'speed']) : null;
+          })
           .catch(function () {})
       : Promise.resolve();
 
@@ -129,23 +156,32 @@
         var rows = (Array.isArray(j) ? j : []).filter(function (e) {
           return String(e.energy || '').indexOf('0.05-0.4') !== -1;
         });
-        setText('xray-class', xrayClass(pick(lastOf(rows), ['obs_flux', 'flux'])));
+        setText('xray-class', xrayClass(pick(lastOf(rows),
+          ['observed_flux', 'obs_flux', 'flux'])));
       }).catch(function () { setText('xray-class', '\u2014'); });
 
       fetchJson(cfg.fluxUrl).then(function (j) {
-        var f = pick(j, ['Flux', 'flux']);
+        var f = pick(lastOf(j), ['Flux', 'flux']);
         setText('f107', f === null ? '\u2014' : String(Math.round(f)) + ' sfu');
       }).catch(function () { setText('f107', '\u2014'); });
 
       fetchJson(cfg.regionsUrl).then(function (j) {
         var tbody = document.getElementById('regions-tbody');
         if (!tbody) return;
+        var rows = (Array.isArray(j) ? j : []).filter(function (r) {
+          return String(r.status || '').toLowerCase() !== 'd';
+        });
+        var latest = rows.reduce(function (m, r) {
+          return String(r.observed_date || '') > m ? String(r.observed_date) : m;
+        }, '');
+        if (latest) {
+          rows = rows.filter(function (r) { return r.observed_date === latest; });
+        }
         tbody.innerHTML = '';
-        (Array.isArray(j) ? j : []).forEach(function (r) {
-          if (String(r.status || '').toLowerCase().indexOf('gone') !== -1) return;
+        rows.forEach(function (r) {
           var tr = document.createElement('tr');
-          [r.region, r.location, r.area, r.mc_class, r.c_events, r.m_events,
-           r.x_events, r.status].forEach(function (v) {
+          [r.region, r.location, r.area, r.mag_class, r.c_xray_events,
+           r.m_xray_events, r.x_xray_events, r.status].forEach(function (v) {
             var td = document.createElement('td');
             td.textContent = (v === undefined || v === null || v === '') ? '\u2014' : v;
             tr.appendChild(td);
@@ -186,8 +222,9 @@
   }
 
   fetchSpaceWeather();
-  setInterval(fetchSpaceWeather, (cfg.noaaRefreshSeconds || 120) * 1000);
+  setInterval(fetchSpaceWeather,
+    Math.max(30, Number(cfg.noaaRefreshSeconds) || 120) * 1000);
   if (cfg.snapshotRefreshSeconds && cfg.snapshotUrl) {
-    setInterval(refreshSnapshot, cfg.snapshotRefreshSeconds * 1000);
+    setInterval(refreshSnapshot, Math.max(10, cfg.snapshotRefreshSeconds) * 1000);
   }
 })();
