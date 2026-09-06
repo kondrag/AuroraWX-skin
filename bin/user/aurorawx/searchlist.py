@@ -22,6 +22,8 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
         weewx.cheetahgenerator.SearchList.__init__(self, generator)
         extras = self.generator.skin_dict.get("Extras", {})
         cfg = extras.get("Aurora", {}) if hasattr(extras, "get") else {}
+        if not hasattr(cfg, "get"):
+            cfg = {}
         self.cam_dir = str(cfg.get("cam_dir", "") or "")
         self.cam_url = str(cfg.get("cam_url", "") or "").rstrip("/")
         try:

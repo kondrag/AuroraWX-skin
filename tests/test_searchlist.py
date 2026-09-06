@@ -52,6 +52,15 @@ def test_garbage_config_does_not_raise_at_construction():
     assert sle2.get_extension_list(None, None)[0]["aurora"]["enabled"] is False
 
 
+def test_scalar_aurora_section_does_not_raise_at_construction():
+    cfg = configobj.ConfigObj()
+    cfg["Extras"] = {"Aurora": "not-a-section"}
+    sle = AuroraSearchList(FakeGenerator(cfg))
+    aurora = sle.get_extension_list(None, None)[0]["aurora"]
+    assert aurora["enabled"] is False
+    assert aurora["status"] == "disabled"
+
+
 def test_scanner_crash_is_contained(monkeypatch):
     def boom(*args, **kwargs):
         raise RuntimeError("simulated scanner crash")
