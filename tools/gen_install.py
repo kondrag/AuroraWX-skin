@@ -4,7 +4,10 @@
 Run after adding/removing files under skins/aurorawx:
 
     python tools/gen_install.py            # rewrite
-    python tools/gen_install.py --check    # exit 1 if stale (used by tests)
+    python tools/gen_install.py --check    # exit nonzero if stale (used by tests)
+
+For testing, the GEN_INSTALL_INSTALL and GEN_INSTALL_SKIN_DIR environment
+variables may override the default install.py / skins/aurorawx paths.
 """
 import os
 import sys
@@ -16,9 +19,9 @@ BEGIN = "# --- BEGIN GENERATED SKIN FILES"
 END = "# --- END GENERATED SKIN FILES ---"
 
 
-def skin_files():
+def skin_files(skin_dir=SKIN_DIR):
     out = []
-    for dirpath, dirnames, filenames in os.walk(SKIN_DIR):
+    for dirpath, dirnames, filenames in os.walk(skin_dir):
         dirnames.sort()
         for fn in sorted(filenames):
             full = os.path.join(dirpath, fn)
@@ -28,25 +31,39 @@ def skin_files():
 
 def render(files):
     lines = [BEGIN + " (tools/gen_install.py) ---", "SKIN_FILES = ["]
-    lines += ["    '%s'," % f for f in files]
+    lines += ["    %r," % f for f in files]
     lines += ["]", END]
     return "\n".join(lines)
 
 
 def main():
-    block = render(skin_files())
-    with open(INSTALL) as f:
+    install_path = os.environ.get("GEN_INSTALL_INSTALL", INSTALL)
+    skin_dir = os.environ.get("GEN_INSTALL_SKIN_DIR", SKIN_DIR)
+    files = skin_files(skin_dir)
+    with open(install_path, encoding="utf-8") as f:
         content = f.read()
+
+    if BEGIN not in content:
+        sys.exit("%s: begin marker %r not found" % (install_path, BEGIN))
     pre, _, rest = content.partition(BEGIN)
+    if END not in rest:
+        sys.exit("%s: end marker %r not found after begin marker"
+                 % (install_path, END))
     _, _, post = rest.partition(END)
+    if BEGIN in post:
+        sys.exit("%s: duplicate begin marker" % install_path)
+    if not files:
+        sys.exit("no skin files found under %s" % skin_dir)
+
+    block = render(files)
     new = pre + block + post
     if "--check" in sys.argv:
         if new != content:
             sys.exit("install.py skin file list is stale; run tools/gen_install.py")
         sys.exit(0)
-    with open(INSTALL, "w") as f:
+    with open(install_path, "w", encoding="utf-8") as f:
         f.write(new)
-    print("updated %s (%d skin files)" % (INSTALL, len(skin_files())))
+    print("updated %s (%d skin files)" % (install_path, len(files)))
 
 
 if __name__ == "__main__":

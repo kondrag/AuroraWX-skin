@@ -394,7 +394,4 @@ class AuroraWXInstaller(ExtensionInstaller):
                 ("skins/aurorawx", SKIN_FILES),
             ],
         }
-        super(AuroraWXInstaller, self).__init__(payload)
-        # WeeWX 5's ExtensionInstaller is a plain dict subclass and never sets
-        # instance attributes; mirror the file list so ``installer.files`` works.
-        self.files = payload["files"]
+        super().__init__(payload)

@@ -24,7 +24,7 @@ def test_generated_manifest_in_sync():
 def test_loader_lists_every_shipped_file():
     installer = load_install().loader()
     listed = set()
-    for dest, files in installer.files:
+    for dest, files in installer["files"]:
         listed.update(files)
     on_disk = set()
     for base in ("bin", "skins"):
@@ -35,7 +35,8 @@ def test_loader_lists_every_shipped_file():
                     continue
                 on_disk.add(os.path.relpath(os.path.join(dirpath, fn), ROOT)
                             .replace(os.sep, "/"))
-    assert on_disk == listed, (on_disk - listed, listed - on_disk)
+    assert on_disk == listed, {"unlisted on disk": on_disk - listed,
+                               "listed but missing": listed - on_disk}
 
 
 def test_installer_metadata_and_config():
