@@ -136,7 +136,7 @@
     $Extras.Translations[$Extras.language].current | $station.location
   </title>
   #include "head.inc"
-  <link rel="stylesheet" href="css/aurora.css">
+  <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
@@ -145,6 +145,8 @@
 
 <main>
   <div class="container-fluid d-flex-xxl flex-wrap">
+
+    <h2 class="$Extras.color-text mt-4">$Extras.Translations[$Extras.language].title_current $current.dateTime</h2>
 
     <div class="row my-4 temprow align-content-start">
       #for $x in $Extras.Appearance.values_order
@@ -164,19 +166,42 @@
     <div class="row my-4 aurora-status-row">
       <div class="col-12">
         <div class="card aurora-status-card">
-          <div class="card-body d-flex flex-wrap align-items-center">
-            <div class="mr-4 text-center">
-              <div class="display-4 mb-0" id="kp-now">&mdash;</div>
-              <small class="text-muted">Kp</small>
-            </div>
-            <div class="mr-auto">
-              <span class="badge aurora-badge" id="aurora-badge">&hellip;</span>
-              <div class="small text-muted mt-1">
-                Bz <span id="bz-now">&mdash;</span> nT &middot;
-                wind <span id="wind-now">&mdash;</span> km/s
+          <div class="card-body">
+            <h5 class="card-title $Extras.color-text mb-3 text-center">$Extras.Translations[$Extras.language].solar_activity</h5>
+            <div class="d-flex flex-wrap align-items-center justify-content-between">
+              <div class="mr-4 text-center">
+                <div class="display-4 mb-0" id="kp-now">&mdash;</div>
+                <small class="text-muted">Kp</small>
+                <div class="mt-1">
+                  <span class="badge aurora-badge" id="aurora-badge">&hellip;</span>
+                </div>
+                <div class="small text-muted mt-1">
+                  Bz <span id="bz-now">&mdash;</span> nT &middot;
+                  wind <span id="wind-now">&mdash;</span> km/s
+                </div>
               </div>
+              <div class="aurora-rsg">
+                <div class="aurora-rsg-head">
+                  <span>Impacts</span><span>Now</span><span>24h max</span>
+                </div>
+                <div class="aurora-rsg-row">
+                  <small class="text-muted">Radio Blackout</small>
+                  <span id="rsg-r-now" class="aurora-chip aurora-chip-unknown">&mdash;</span>
+                  <span id="rsg-r-max" class="aurora-chip aurora-chip-unknown">&mdash;</span>
+                </div>
+                <div class="aurora-rsg-row">
+                  <small class="text-muted">Solar Radiation Storm</small>
+                  <span id="rsg-s-now" class="aurora-chip aurora-chip-unknown">&mdash;</span>
+                  <span id="rsg-s-max" class="aurora-chip aurora-chip-unknown">&mdash;</span>
+                </div>
+                <div class="aurora-rsg-row">
+                  <small class="text-muted">Geomagnetic Storm</small>
+                  <span id="rsg-g-now" class="aurora-chip aurora-chip-unknown">&mdash;</span>
+                  <span id="rsg-g-max" class="aurora-chip aurora-chip-unknown">&mdash;</span>
+                </div>
+              </div>
+              <a class="btn btn-$Extras.color btn-sm" href="aurora.html">Details &rarr;</a>
             </div>
-            <a class="btn btn-$Extras.color btn-sm" href="aurora.html">Details &rarr;</a>
           </div>
         </div>
       </div>
@@ -211,6 +236,8 @@
   "kpUrl": "$Extras.Aurora.kp_url",
   "windUrl": "$Extras.Aurora.wind_url",
   "magUrl": "$Extras.Aurora.mag_url",
+  "xraysLongUrl": "$Extras.Aurora.xrays_long_url",
+  "protonsUrl": "$Extras.Aurora.protons_url",
   "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
   "snapshotRefreshSeconds": 0
 }

@@ -19,6 +19,11 @@
                 <strong>$station.location</strong><br>
                 <span class="font-small">$current.dateTime</span>
             </span>
+            #if $Extras.Header.show_aurora_icon == "yes"
+            <img src="img/aurora-borealis.svg" alt=""
+                 class="aurora-loc-icon"
+                 title="Aurora borealis">
+            #end if
         </span>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
                 aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,64 +44,54 @@
                     #end if
                 #end if
 
-                #if $Extras.Header.yesterday_nav_link == "yes"
-                    #if $active_nav == 'yesterday'
-                    <li class="nav-item active mr-3">
-                        <a class="nav-link" href="yesterday.html">$Extras.Translations[$Extras.language].yesterday</a>
-                    </li>
+                #if $Extras.Header.yesterday_nav_link == "yes" or $Extras.Header.week_nav_link == "yes" or $Extras.Header.month_nav_link == "yes" or $Extras.Header.year_nav_link == "yes" or $Extras.Header.archive_nav_link == "yes"
+                    #if $active_nav in ('yesterday', 'week', 'month', 'year', 'archive')
+                    <li class="nav-item dropdown mr-3">
+                        <a class="nav-link dropdown-toggle active" href="#" role="button" data-toggle="dropdown"
+                           aria-haspopup="true" aria-expanded="false">$Extras.Translations[$Extras.language].past</a>
                     #else
-                    <li class="nav-item mr-3">
-                        <a class="nav-link" href="yesterday.html">$Extras.Translations[$Extras.language].yesterday</a>
-                    </li>
+                    <li class="nav-item dropdown mr-3">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown"
+                           aria-haspopup="true" aria-expanded="false">$Extras.Translations[$Extras.language].past</a>
                     #end if
-                #end if
-
-                #if $Extras.Header.week_nav_link == "yes"
-                    #if $active_nav == 'week'
-                    <li class="nav-item active mr-3">
-                        <a class="nav-link" href="week.html">$Extras.Translations[$Extras.language].week</a>
+                        <div class="dropdown-menu">
+                        #if $Extras.Header.yesterday_nav_link == "yes"
+                            #if $active_nav == 'yesterday'
+                            <a class="dropdown-item active" href="yesterday.html">$Extras.Translations[$Extras.language].yesterday</a>
+                            #else
+                            <a class="dropdown-item" href="yesterday.html">$Extras.Translations[$Extras.language].yesterday</a>
+                            #end if
+                        #end if
+                        #if $Extras.Header.week_nav_link == "yes"
+                            #if $active_nav == 'week'
+                            <a class="dropdown-item active" href="week.html">$Extras.Translations[$Extras.language].week</a>
+                            #else
+                            <a class="dropdown-item" href="week.html">$Extras.Translations[$Extras.language].week</a>
+                            #end if
+                        #end if
+                        #if $Extras.Header.month_nav_link == "yes"
+                            #if $active_nav == 'month'
+                            <a class="dropdown-item active" href="month.html">$Extras.Translations[$Extras.language].month</a>
+                            #else
+                            <a class="dropdown-item" href="month.html">$Extras.Translations[$Extras.language].month</a>
+                            #end if
+                        #end if
+                        #if $Extras.Header.year_nav_link == "yes"
+                            #if $active_nav == 'year'
+                            <a class="dropdown-item active" href="year.html">$Extras.Translations[$Extras.language].year</a>
+                            #else
+                            <a class="dropdown-item" href="year.html">$Extras.Translations[$Extras.language].year</a>
+                            #end if
+                        #end if
+                        #if $Extras.Header.archive_nav_link == "yes"
+                            #if $active_nav == 'archive'
+                            <a class="dropdown-item active" href="archive.html">$Extras.Translations[$Extras.language].archive</a>
+                            #else
+                            <a class="dropdown-item" href="archive.html">$Extras.Translations[$Extras.language].archive</a>
+                            #end if
+                        #end if
+                        </div>
                     </li>
-                    #else
-                    <li class="nav-item mr-3">
-                        <a class="nav-link" href="week.html">$Extras.Translations[$Extras.language].week</a>
-                    </li>
-                    #end if
-                #end if
-
-                #if $Extras.Header.month_nav_link == "yes"
-                    #if $active_nav == 'month'
-                    <li class="nav-item active mr-3">
-                        <a class="nav-link" href="month.html">$Extras.Translations[$Extras.language].month</a>
-                    </li>
-                    #else
-                    <li class="nav-item mr-3">
-                        <a class="nav-link" href="month.html">$Extras.Translations[$Extras.language].month</a>
-                    </li>
-                    #end if
-                #end if
-
-                #if $Extras.Header.year_nav_link == "yes"
-                    #if $active_nav == 'year'
-                    <li class="nav-item active mr-3">
-                        <a class="nav-link" href="year.html">$Extras.Translations[$Extras.language].year</a>
-                    </li>
-                    #else
-                    <li class="nav-item mr-3">
-                        <a class="nav-link" href="year.html">$Extras.Translations[$Extras.language].year</a>
-                    </li>
-                    #end if
-                #end if
-
-                #if $Extras.Header.archive_nav_link == "yes"
-                    #if $active_nav == 'archive'
-                    <li class="nav-item active mr-3">
-                        <a class="nav-link" href="archive.html">$Extras.Translations[$Extras.language].archive</a>
-                    </li>
-                    #else
-                    <li class="nav-item mr-3">
-                        <a class="nav-link" href="archive.html">$Extras.Translations[$Extras.language].archive</a>
-                    </li>
-                    #end if
                 #end if
 
                 #if $Extras.Header.aurora_nav_link == "yes"

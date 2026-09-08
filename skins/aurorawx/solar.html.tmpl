@@ -10,7 +10,7 @@
     $Extras.Translations[$Extras.language].solar | $station.location
   </title>
   #include "head.inc"
-  <link rel="stylesheet" href="css/aurora.css">
+  <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
@@ -37,7 +37,7 @@
 
     <div class="row my-4">
       <div class="col-6 col-md-2 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="kp-now">&mdash;</div>
             <div class="text-muted">Kp index</div>
@@ -45,7 +45,7 @@
         </div>
       </div>
       <div class="col-6 col-md-2 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="kp-peak">&mdash;</div>
             <div class="text-muted">Kp 24 h peak</div>
@@ -53,7 +53,7 @@
         </div>
       </div>
       <div class="col-6 col-md-2 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="bz-now">&mdash;</div>
             <div class="text-muted">Bz (nT)</div>
@@ -61,7 +61,7 @@
         </div>
       </div>
       <div class="col-6 col-md-2 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="wind-now">&mdash;</div>
             <div class="text-muted">Wind (km/s)</div>
@@ -69,7 +69,7 @@
         </div>
       </div>
       <div class="col-6 col-md-2 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="xray-class">&mdash;</div>
             <div class="text-muted">X-ray class</div>
@@ -77,8 +77,8 @@
         </div>
       </div>
       <div class="col-6 col-md-2 mb-3">
-        <div class="card text-center">
-          <div class="card-body">
+        <div class="card h-100 text-center">
+          <div class="card-body d-flex flex-column justify-content-center">
             <div class="h4 py-1" id="f107">&mdash;</div>
             <div class="text-muted">F10.7 flux</div>
           </div>

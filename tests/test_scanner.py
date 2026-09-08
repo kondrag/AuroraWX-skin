@@ -259,6 +259,188 @@ def test_snapshot_stale_flag(tmp_path):
     assert r["status"] == scanner.STALE
 
 
+def local_ts(days_back, hour=5, minute=30):
+    """Epoch for 'days_back' local calendar days before NOW, at hour:minute.
+
+    Structural mktime keeps the local date correct across month boundaries
+    and DST transitions, so the weekday always differs from NOW's by
+    days_back % 7.
+    """
+    lt = time.localtime(NOW)
+    return time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday - days_back,
+                        hour, minute, 0, 0, 0, -1))
+
+
+def local_date_iso(ts):
+    return time.strftime("%Y-%m-%d", time.localtime(ts))
+
+
+def test_thumbnail_recorded_on_entry_and_day(tmp_path):
+    ts = local_ts(1)
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", ts)
+    thumb = name[:-len(".mp4")] + ".thumbnail.jpg"
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / thumb, mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["aurora_videos"][0]["thumbnail"] == thumb
+    assert r["days"][0]["aurora_thumbnail"] == thumb
+
+
+def test_thumbnail_mtime_exposed_and_independent_of_video(tmp_path):
+    """Cache-busting for thumbnails must use the THUMBNAIL's own mtime so
+    a re-synthesized thumbnail busts browser caches."""
+    ts = local_ts(1)
+    thumb_ts = ts + 3600  # thumbnail written later than the video
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", ts)
+    thumb = name[:-len(".mp4")] + ".thumbnail.jpg"
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / thumb, mtime=thumb_ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["aurora_videos"][0]["thumbnail_mtime"] == thumb_ts
+    assert r["days"][0]["aurora_thumbnail_mtime"] == thumb_ts
+    assert r["days"][0]["aurora_mtime"] == ts
+
+
+def test_thumbnail_mtime_none_when_missing(tmp_path):
+    ts = local_ts(1)
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", ts)
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["aurora_videos"][0]["thumbnail_mtime"] is None
+    assert r["days"][0]["aurora_thumbnail_mtime"] is None
+
+
+def test_cloud_thumbnail_recorded(tmp_path):
+    ts = local_ts(1)
+    name = day_file_name(scanner.CLOUD_PREFIX, ".mp4", ts)
+    thumb = name[:-len(".mp4")] + ".thumbnail.jpg"
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / thumb, mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["cloud_videos"][0]["thumbnail"] == thumb
+    assert r["days"][0]["cloud_thumbnail"] == thumb
+
+
+def test_missing_thumbnail_is_none(tmp_path):
+    ts = local_ts(1)
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", ts)
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["aurora_videos"][0]["thumbnail"] is None
+    assert r["days"][0]["aurora_thumbnail"] is None
+
+
+def test_orphan_thumbnail_ignored(tmp_path):
+    make(tmp_path / "AuroraCam_Monday.thumbnail.jpg", mtime=NOW - 60)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["aurora_videos"] == []
+    assert r["days"] == []
+
+
+def test_week_old_asset_lands_on_today_card_pending(tmp_path):
+    ts = local_ts(7)  # same weekday as today, one week old
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", ts)
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert len(r["days"]) == 1
+    d = r["days"][0]
+    assert d["is_today"] is True
+    assert d["date_iso"] == local_date_iso(NOW)
+    assert d["day_name"] == time.strftime("%A", time.localtime(NOW))
+    assert d["aurora_video"] == name
+    assert d["aurora_pending"] is True
+
+
+def test_current_weekday_asset_not_pending(tmp_path):
+    ts = local_ts(0)  # finalized this morning: current content
+    name = day_file_name(scanner.AURORA_PREFIX, ".mp4", ts)
+    make(tmp_path / name, mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    d = r["days"][0]
+    assert d["is_today"] is True
+    assert d["aurora_pending"] is False
+
+
+def test_week_old_asset_replaced_by_current_not_pending(tmp_path):
+    old_ts = local_ts(7)
+    new_ts = local_ts(0)
+    old_name = day_file_name(scanner.AURORA_PREFIX, ".mp4", old_ts)
+    new_name = day_file_name(scanner.AURORA_PREFIX, ".mp4", new_ts)
+    make(tmp_path / old_name, mtime=old_ts)
+    make(tmp_path / new_name, mtime=new_ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert len(r["days"]) == 1
+    d = r["days"][0]
+    assert d["aurora_video"] == new_name
+    assert d["aurora_pending"] is False
+
+
+def test_pending_false_when_slot_empty(tmp_path):
+    ts = local_ts(1)
+    make(tmp_path / day_file_name(scanner.CLOUD_PREFIX, ".mp4", ts), mtime=ts)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    d = r["days"][0]
+    assert d["aurora_video"] is None
+    assert d["aurora_pending"] is False
+
+
+def test_day_sizes_exposed(tmp_path):
+    ts = local_ts(1)
+    make(tmp_path / day_file_name(scanner.AURORA_PREFIX, ".mp4", ts),
+         mtime=ts, size=2 * 1024 * 1024)
+    make(tmp_path / day_file_name(scanner.CLOUD_PREFIX, ".mp4", ts),
+         mtime=ts, size=3 * 1024 * 1024)
+    make(tmp_path / day_file_name(scanner.SPACEWEATHER_PREFIX, ".gif", ts),
+         mtime=ts, size=1024)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    d = r["days"][0]
+    assert d["aurora_size_mb"] == 2.0
+    assert d["cloud_size_mb"] == 3.0
+    assert d["spaceweather_size_mb"] == 0.0
+    assert d["aurora_mtime"] == int(ts)
+    assert d["cloud_mtime"] == int(ts)
+    assert d["spaceweather_mtime"] == int(ts)
+    assert d["spaceweather_mtime"] is not None
+
+
+def test_day_thumbnail_follows_winning_video(tmp_path):
+    old_ts = local_ts(7)
+    new_ts = local_ts(0)  # same weekday: newest file wins the card
+    old_name = day_file_name(scanner.AURORA_PREFIX, ".mp4", old_ts)
+    new_name = old_name[:-len(".mp4")] + "_2.mp4"
+    old_thumb = old_name[:-len(".mp4")] + ".thumbnail.jpg"
+    make(tmp_path / old_name, mtime=old_ts)
+    make(tmp_path / new_name, mtime=new_ts)
+    make(tmp_path / old_thumb, mtime=old_ts)  # only the loser has a thumbnail
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    d = r["days"][0]
+    assert d["aurora_video"] == new_name
+    assert d["aurora_thumbnail"] is None
+
+
+def test_spaceweather_size_kb(tmp_path):
+    ts = NOW - 86400
+    make(tmp_path / day_file_name(scanner.SPACEWEATHER_PREFIX, ".gif", ts),
+         mtime=ts, size=25 * 1024 + 600)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    d = r["days"][0]
+    assert d["spaceweather_size_kb"] == 26
+    assert r["spaceweather"][0]["size_kb"] == 26
+
+
 def test_days_combined_view(tmp_path):
     ts1 = NOW - 2 * 86400
     ts2 = NOW - 86400
@@ -274,3 +456,92 @@ def test_days_combined_view(tmp_path):
     assert r["days"][0]["cloud_video"].startswith("CloudCam_")
     assert r["days"][0]["spaceweather"].startswith("SpaceWeather_")
     assert r["days"][1]["aurora_video"].startswith("AuroraCam_")
+
+
+TWO_CAMERAS = [
+    {"key": "sky", "label": "Sky camera", "image": "snapshot.jpg"},
+    {"key": "ground", "label": "Ground camera", "image": "Driveway.jpg"},
+]
+
+
+def test_default_cameras_is_sky_snapshot(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert len(r["cameras"]) == 1
+    cam = r["cameras"][0]
+    assert cam["key"] == "sky"
+    assert cam["image"] == "snapshot.jpg"
+    assert cam["exists"] is True
+    assert cam["url"] == "snapshot.jpg"
+    assert cam["age_minutes"] == 1
+    assert cam["is_stale"] is False
+
+
+def test_custom_cameras_scanned_independently(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    make(tmp_path / "Driveway.jpg", mtime=NOW - 600)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW, cameras=TWO_CAMERAS)
+    sky, ground = r["cameras"]
+    assert sky["key"] == "sky"
+    assert ground["key"] == "ground"
+    assert ground["image"] == "Driveway.jpg"
+    assert ground["exists"] is True
+    assert ground["age_minutes"] == 10
+    # snapshot mirrors the first configured camera
+    assert r["snapshot"]["exists"] is True
+    assert r["snapshot"]["mtime"] == sky["mtime"]
+
+
+def test_missing_ground_camera_exists_false(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW, cameras=TWO_CAMERAS)
+    sky, ground = r["cameras"]
+    assert sky["exists"] is True
+    assert ground["exists"] is False
+    assert ground["mtime"] is None
+    assert ground["is_stale"] is True
+
+
+def test_camera_staleness_per_camera(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 5 * 60)
+    make(tmp_path / "Driveway.jpg", mtime=NOW - 2 * 3600)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW, stale_minutes=30,
+                               cameras=TWO_CAMERAS)
+    assert r["cameras"][0]["is_stale"] is False
+    assert r["cameras"][1]["is_stale"] is True
+
+
+def test_cameras_listed_even_when_directory_empty(tmp_path):
+    r = scanner.scan_directory(tmp_path, now_ts=NOW, cameras=TWO_CAMERAS)
+    assert [c["key"] for c in r["cameras"]] == ["sky", "ground"]
+    assert all(c["exists"] is False for c in r["cameras"])
+
+
+def test_clearsky_chart_scanned_when_present(tmp_path):
+    make(tmp_path / "clearsky_chart.gif", mtime=NOW - 5 * 60, size=28566)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    chart = r["clearsky_chart"]
+    assert chart["exists"] is True
+    assert chart["url"] == "clearsky_chart.gif"
+    assert chart["age_minutes"] == 5
+    assert chart["is_stale"] is False
+
+
+def test_clearsky_chart_missing_when_absent(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    chart = r["clearsky_chart"]
+    assert chart["exists"] is False
+    assert chart["url"] == "clearsky_chart.gif"
+    assert chart["mtime"] is None
+    assert chart["is_stale"] is True
+
+
+def test_clearsky_chart_custom_filename(tmp_path):
+    make(tmp_path / "mychart.gif", mtime=NOW - 2 * 3600)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW,
+                               clearsky_chart="mychart.gif")
+    chart = r["clearsky_chart"]
+    assert chart["exists"] is True
+    assert chart["url"] == "mychart.gif"
+    assert chart["is_stale"] is True  # 2h old > 30 min default

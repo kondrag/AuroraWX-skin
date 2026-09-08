@@ -10,7 +10,7 @@
     $Extras.Translations[$Extras.language].gallery | $station.location
   </title>
   #include "head.inc"
-  <link rel="stylesheet" href="css/aurora.css">
+  <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
@@ -57,24 +57,60 @@
               </small>
             </h5>
             <div class="row">
-              <div class="col-md-7 mb-3">
-                <h6>Aurora cam</h6>
+              <div class="col-md-4 mb-3">
+                <h6 class="aurora-media-title">Night timelapse
+                  #if $day.aurora_video and $day.aurora_pending
+                  <span class="text-muted aurora-update-pending">(update pending)</span>
+                  #end if
+                </h6>
                 #if $day.aurora_video
-                <video controls preload="none" class="w-100 rounded">
-                  <source src="$day.aurora_video" type="video/mp4">
-                </video>
+                <div class="aurora-media-frame">
+                  #if $day.aurora_thumbnail
+                  <img src="$day.aurora_thumbnail?v=$day.aurora_thumbnail_mtime"
+                       alt="Night timelapse for $day.day_name" loading="lazy"
+                       class="aurora-modal-trigger" data-type="video"
+                       data-src="$day.aurora_video?v=$day.aurora_mtime"
+                       data-title="Night timelapse — $day.day_name, $day.date_iso">
+                  #else
+                  <img src="$day.aurora_video?v=$day.aurora_mtime#t=0.5"
+                       alt="Night timelapse for $day.day_name" loading="lazy"
+                       class="aurora-modal-trigger" data-type="video"
+                       data-src="$day.aurora_video?v=$day.aurora_mtime"
+                       data-title="Night timelapse — $day.day_name, $day.date_iso">
+                  #end if
+                  <div class="aurora-play-overlay">&#9654;</div>
+                </div>
+                <small class="text-muted">$day.aurora_size_mb MB</small>
                 #else
                 <div class="aurora-placeholder d-flex align-items-center justify-content-center">
                   <span class="text-muted">Still encoding</span>
                 </div>
                 #end if
               </div>
-              <div class="col-md-5 mb-3">
-                <h6>Cloud cam</h6>
+              <div class="col-md-4 mb-3">
+                <h6 class="aurora-media-title">Day timelapse
+                  #if $day.cloud_video and $day.cloud_pending
+                  <span class="text-muted aurora-update-pending">(update pending)</span>
+                  #end if
+                </h6>
                 #if $day.cloud_video
-                <video controls preload="none" class="w-100 rounded">
-                  <source src="$day.cloud_video" type="video/mp4">
-                </video>
+                <div class="aurora-media-frame">
+                  #if $day.cloud_thumbnail
+                  <img src="$day.cloud_thumbnail?v=$day.cloud_thumbnail_mtime"
+                       alt="Day timelapse for $day.day_name" loading="lazy"
+                       class="aurora-modal-trigger" data-type="video"
+                       data-src="$day.cloud_video?v=$day.cloud_mtime"
+                       data-title="Day timelapse — $day.day_name, $day.date_iso">
+                  #else
+                  <img src="$day.cloud_video?v=$day.cloud_mtime#t=0.5"
+                       alt="Day timelapse for $day.day_name" loading="lazy"
+                       class="aurora-modal-trigger" data-type="video"
+                       data-src="$day.cloud_video?v=$day.cloud_mtime"
+                       data-title="Day timelapse — $day.day_name, $day.date_iso">
+                  #end if
+                  <div class="aurora-play-overlay">&#9654;</div>
+                </div>
+                <small class="text-muted">$day.cloud_size_mb MB</small>
                 #else
                 <div class="aurora-placeholder d-flex align-items-center justify-content-center">
                   <span class="text-muted">Still encoding</span>
@@ -82,10 +118,20 @@
                 #end if
               </div>
               #if $day.spaceweather
-              <div class="col-12">
-                <h6>Space weather (3-day Kp)</h6>
-                <img src="$day.spaceweather" class="img-fluid rounded" loading="lazy"
-                     alt="Kp history $day.date_iso">
+              <div class="col-md-4 mb-3">
+                <h6 class="aurora-media-title">Space weather
+                  #if $day.spaceweather_pending
+                  <span class="text-muted aurora-update-pending">(update pending)</span>
+                  #end if
+                </h6>
+                <div class="aurora-media-frame">
+                  <img src="$day.spaceweather?v=$day.spaceweather_mtime"
+                       alt="Kp history for $day.day_name" loading="lazy"
+                       class="aurora-modal-trigger" data-type="image"
+                       data-src="$day.spaceweather?v=$day.spaceweather_mtime"
+                       data-title="Space weather history — $day.day_name, $day.date_iso">
+                </div>
+                <small class="text-muted">$day.spaceweather_size_kb kB</small>
               </div>
               #end if
             </div>
@@ -111,8 +157,18 @@
   </div>
 </main>
 
+<div id="auroraModal" class="aurora-modal" aria-hidden="true" role="dialog"
+     aria-label="Media viewer">
+  <span class="aurora-modal-close" aria-label="Close">&times;</span>
+  <figure class="aurora-modal-dialog">
+    <div class="aurora-modal-body"></div>
+    <figcaption class="aurora-modal-caption"></figcaption>
+  </figure>
+</div>
+
 #include "footer.inc"
 #include "js.inc"
+<script src="js/aurora-gallery.js?v=$aurora.asset_version"></script>
 
 </body>
 </html>

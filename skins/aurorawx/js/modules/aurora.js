@@ -28,6 +28,19 @@
     return Array.isArray(json) ? json[json.length - 1] : json;
   }
 
+  /* NOAA feeds disagree on ordering (rtsw_* are newest-first, others are
+     oldest-first), so scan for the entry with the newest time_tag. */
+  function newestByTime(json) {
+    var best = null, bestT = -Infinity;
+    (Array.isArray(json) ? json : []).forEach(function (e) {
+      if (!e || !e.time_tag) return;
+      var s = String(e.time_tag);
+      var t = new Date(s.replace(' ', 'T') + (/[Zz]$/.test(s) ? '' : 'Z')).getTime();
+      if (!isNaN(t) && t > bestT) { bestT = t; best = e; }
+    });
+    return best;
+  }
+
   function pick(obj, names) {
     if (!obj) return null;
     for (var i = 0; i < names.length; i++) {
@@ -174,8 +187,8 @@
     var kpPromise = fetchJson(cfg.kpUrl).then(normalizeKp)
       .catch(function () { return []; });
     function freshEntry(j, maxAgeMs) {
-      var e = lastOf(j);
-      if (!e || !e.time_tag) return null;
+      var e = newestByTime(j);
+      if (!e) return null;
       var s = String(e.time_tag);
       var t = new Date(s.replace(' ', 'T') + (/[Zz]$/.test(s) ? '' : 'Z')).getTime();
       if (isNaN(t) || Date.now() - t > maxAgeMs) return null;
@@ -201,6 +214,7 @@
     Promise.all([kpPromise, magPromise, windPromise]).then(function (res) {
       renderStatus(res[0], bz, wind);
       if (page === 'aurora' || page === 'solar') renderKpChart(res[0]);
+      renderG(res[0]);
     });
 
     if (page === 'solar' && cfg.kpForecastUrl) {
@@ -260,30 +274,126 @@
   }
 
   function refreshSnapshot() {
-    var img = document.getElementById('snapshot-img');
-    if (!img || !cfg.snapshotUrl) return;
-    var sep = cfg.snapshotUrl.indexOf('?') === -1 ? '?' : '&';
-    var bust = cfg.snapshotUrl + sep + 't=' + Date.now();
-    var probe = new Image();
-    probe.onload = function () {
-      img.src = bust;
-      fetch(cfg.snapshotUrl, { method: 'HEAD', cache: 'no-store' })
-        .then(function (r) {
-          var lm = r.headers.get('Last-Modified');
-          if (lm) {
-            var ageMin = Math.max(0,
-              Math.round((Date.now() - new Date(lm).getTime()) / 60000));
-            setText('snapshot-age', 'updated ' + ageMin + ' min ago');
-          }
-        }).catch(function () {});
+    var imgs = document.querySelectorAll('img[data-snapshot-url]');
+    Array.prototype.forEach.call(imgs, function (img) {
+      var url = img.getAttribute('data-snapshot-url');
+      var key = img.getAttribute('data-camera-key');
+      if (!url) return;
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      var bust = url + sep + 't=' + Date.now();
+      var probe = new Image();
+      probe.onload = function () {
+        img.src = bust;
+        fetch(url, { method: 'HEAD', cache: 'no-store' })
+          .then(function (r) {
+            var lm = r.headers.get('Last-Modified');
+            if (lm && key) {
+              var ageEl = document.querySelector(
+                '[data-snapshot-age="' + key + '"]');
+              if (ageEl) {
+                var ageMin = Math.max(0,
+                  Math.round((Date.now() - new Date(lm).getTime()) / 60000));
+                ageEl.textContent = 'updated ' + ageMin + ' min ago';
+              }
+            }
+          }).catch(function () {});
+      };
+      probe.src = bust;
+    });
+  }
+
+  /* NOAA-style R/S/G scale chips (index page). G reuses the kp fetch;
+     R and S use longer feeds refreshed on a slower cadence. */
+  var RSG_XRAY_THRESHOLD = [1e-5, 5e-5, 1e-4, 1e-3, 2e-3];
+  var RSG_PROTON_THRESHOLD = [10, 100, 1e3, 1e4, 1e5];
+  var RSG_KP_THRESHOLD = [5, 6, 7, 8, 9];
+
+  function rsgLevel(value, thresholds) {
+    if (value === null || value === undefined || isNaN(value)) return -1;
+    var level = 0;
+    for (var i = 0; i < thresholds.length; i++) {
+      if (value >= thresholds[i]) level = i + 1;
+    }
+    return level;
+  }
+
+  function setRsgChip(id, letter, level) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (level < 0) {
+      el.textContent = '\u2014';
+      el.className = 'aurora-chip aurora-chip-unknown';
+    } else if (level === 0) {
+      el.textContent = 'None';
+      el.className = 'aurora-chip aurora-chip-l0';
+    } else {
+      el.textContent = letter + level;
+      el.className = 'aurora-chip aurora-chip-l' + level;
+    }
+  }
+
+  function parseSeries(json, energy, valueKeys) {
+    var out = [];
+    (Array.isArray(json) ? json : []).forEach(function (e) {
+      if (energy && e.energy !== energy) return;
+      var v = Number(pick(e, valueKeys));
+      if (isNaN(v)) return;
+      var s = String(e.time_tag);
+      var t = new Date(s.replace(' ', 'T') + (/[Zz]$/.test(s) ? '' : 'Z')).getTime();
+      if (!isNaN(t)) out.push({ t: t, v: v });
+    });
+    out.sort(function (a, b) { return a.t - b.t; });
+    return out;
+  }
+
+  function scaleFromSeries(series, thresholds) {
+    if (!series.length) return { now: -1, max: -1 };
+    var cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    var max = -Infinity;
+    series.forEach(function (p) { if (p.t >= cutoff && p.v > max) max = p.v; });
+    return {
+      now: rsgLevel(series[series.length - 1].v, thresholds),
+      max: max === -Infinity ? -1 : rsgLevel(max, thresholds)
     };
-    probe.src = bust;
+  }
+
+  function renderG(kpSeries) {
+    if (!document.getElementById('rsg-g-now')) return;
+    var sc = scaleFromSeries(kpSeries.map(function (p) {
+      return { t: p.t, v: p.kp };
+    }), RSG_KP_THRESHOLD);
+    setRsgChip('rsg-g-now', 'G', sc.now);
+    setRsgChip('rsg-g-max', 'G', sc.max);
+  }
+
+  function fetchRsg() {
+    if (!document.getElementById('rsg-r-now')) return;
+    if (cfg.xraysLongUrl) {
+      fetchJson(cfg.xraysLongUrl).then(function (j) {
+        var sc = scaleFromSeries(
+          parseSeries(j, '0.1-0.8nm', ['flux']), RSG_XRAY_THRESHOLD);
+        setRsgChip('rsg-r-now', 'R', sc.now);
+        setRsgChip('rsg-r-max', 'R', sc.max);
+      }).catch(function () {});
+    }
+    if (cfg.protonsUrl) {
+      fetchJson(cfg.protonsUrl).then(function (j) {
+        var sc = scaleFromSeries(
+          parseSeries(j, '>=10 MeV', ['flux']), RSG_PROTON_THRESHOLD);
+        setRsgChip('rsg-s-now', 'S', sc.now);
+        setRsgChip('rsg-s-max', 'S', sc.max);
+      }).catch(function () {});
+    }
   }
 
   fetchSpaceWeather();
   setInterval(fetchSpaceWeather,
     Math.max(30, Number(cfg.noaaRefreshSeconds) || 120) * 1000);
-  if (cfg.snapshotRefreshSeconds && cfg.snapshotUrl) {
+  fetchRsg();
+  setInterval(fetchRsg,
+    Math.max(600, (Number(cfg.noaaRefreshSeconds) || 120) * 5) * 1000);
+  if (cfg.snapshotRefreshSeconds &&
+      (cfg.cameras || cfg.snapshotUrl)) {
     setInterval(refreshSnapshot, Math.max(10, cfg.snapshotRefreshSeconds) * 1000);
   }
 })();

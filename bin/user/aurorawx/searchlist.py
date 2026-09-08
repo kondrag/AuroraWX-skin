@@ -11,9 +11,13 @@ imports. Neither construction nor get_extension_list() can raise:
 any failure degrades to a no_data/disabled state (spec section 4).
 """
 
+import os
+
 import weewx.cheetahgenerator
 
 from user.aurorawx import scanner
+
+ASSET_FILES = ("css/aurora.css", "js/aurora-gallery.js")
 
 
 class AuroraSearchList(weewx.cheetahgenerator.SearchList):
@@ -32,6 +36,58 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
             self.stale_minutes = 30
         self.night_publish_by = str(cfg.get("night_publish_by", "07:00"))
         self.day_publish_by = str(cfg.get("day_publish_by", "19:00"))
+        self.cameras = self._read_cameras(cfg)
+        self.clearsky_chart = str(cfg.get("clearsky_chart_filename",
+                                          "clearsky_chart.gif") or "")
+        self.asset_version = self._compute_asset_version()
+
+    @staticmethod
+    def _read_cameras(cfg):
+        """Normalize the [[[cameras]]] config to a list of dicts.
+
+        Each [[[[<key>]]]] subsection becomes {key, label, image}; a
+        scalar or absent section degrades to an empty list (the scanner
+        then applies its snapshot.jpg default).
+        """
+        try:
+            raw = cfg.get("cameras")
+            if not hasattr(raw, "items"):
+                return []
+            cameras = []
+            for key, sub in raw.items():
+                sub = sub if hasattr(sub, "get") else {}
+                cameras.append({
+                    "key": str(key),
+                    "label": str(sub.get("label", "") or key),
+                    "image": str(sub.get("image", "") or ""),
+                })
+            return cameras
+        except Exception:
+            return []
+
+    def _compute_asset_version(self):
+        """Max mtime of the skin's custom css/js, for cache-busting ?v=.
+
+        Never raises: any failure degrades to 1.
+        """
+        try:
+            skin_dict = self.generator.skin_dict
+            skin_root = str(skin_dict.get("SKIN_ROOT", "skins"))
+            skin_dir = os.path.join(skin_root, str(skin_dict.get("skin", "")))
+            if not os.path.isabs(skin_dir):
+                config_dict = getattr(self.generator, "config_dict", {})
+                weewx_root = config_dict.get("WEEWX_ROOT", "") \
+                    if hasattr(config_dict, "get") else ""
+                skin_dir = os.path.join(str(weewx_root), skin_dir)
+            best = 0
+            for rel in ASSET_FILES:
+                try:
+                    best = max(best, int(os.path.getmtime(os.path.join(skin_dir, rel))))
+                except OSError:
+                    continue
+            return best or 1
+        except Exception:
+            return 1
 
     def _abs_url(self, filename):
         if not filename:
@@ -41,10 +97,13 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
     def get_extension_list(self, timespan, db_lookup):
         data = {
             "enabled": False, "status": "disabled", "cam_dir": self.cam_dir,
+            "asset_version": self.asset_version,
             "snapshot": {"exists": False, "url": None, "mtime": None,
                          "age_minutes": None, "is_stale": True},
             "aurora_videos": [], "cloud_videos": [], "spaceweather": [],
-            "days": [],
+            "days": [], "cameras": [],
+            "clearsky_chart": {"exists": False, "url": None, "mtime": None,
+                               "age_minutes": None, "is_stale": True},
         }
         if self.cam_dir:
             try:
@@ -52,17 +111,28 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
                     self.cam_dir,
                     stale_minutes=self.stale_minutes,
                     night_publish_by=self.night_publish_by,
-                    day_publish_by=self.day_publish_by)
+                    day_publish_by=self.day_publish_by,
+                    cameras=self.cameras,
+                    clearsky_chart=self.clearsky_chart)
                 data.update(scanned)
                 data["enabled"] = True
             except Exception as e:  # belt and braces: never break a report run
                 data.update({"enabled": True, "status": scanner.NO_DATA,
                              "error": repr(e)})
             data["snapshot"]["url"] = self._abs_url(data["snapshot"]["url"])
-            for key in ("aurora_videos", "cloud_videos", "spaceweather"):
+            chart = data.get("clearsky_chart")
+            if chart:
+                chart["url"] = self._abs_url(chart["url"])
+            for camera in data["cameras"]:
+                camera["url"] = self._abs_url(camera["url"])
+            for key in ("aurora_videos", "cloud_videos"):
                 for entry in data[key]:
                     entry["url"] = self._abs_url(entry["url"])
+                    entry["thumbnail"] = self._abs_url(entry["thumbnail"])
+            for entry in data["spaceweather"]:
+                entry["url"] = self._abs_url(entry["url"])
             for day in data["days"]:
-                for key in ("aurora_video", "cloud_video", "spaceweather"):
+                for key in ("aurora_video", "cloud_video", "spaceweather",
+                            "aurora_thumbnail", "cloud_thumbnail"):
                     day[key] = self._abs_url(day[key])
         return [{"aurora": data}]

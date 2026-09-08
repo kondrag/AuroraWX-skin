@@ -8,8 +8,16 @@
 .aurora-hero-img {
   display: block;
   width: 100%;
-  max-height: 60vh;
-  object-fit: cover;
+  max-height: 45vh;
+  object-fit: contain;
+  background: rgba(0, 0, 0, .35);
+}
+
+.aurora-clearsky-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: zoom-in;
 }
 
 .aurora-hero-overlay {
@@ -36,9 +44,18 @@
 }
 
 .aurora-placeholder {
+  /* Uniform 16:9 frame matching .aurora-media-frame so pending slots
+     look like regular media cards while an asset is not yet available. */
   border: 1px dashed rgba(128, 128, 128, .5);
   border-radius: .25rem;
-  min-height: 160px;
+  aspect-ratio: 16 / 9;
+  background-color: rgba(0, 0, 0, .35);
+}
+
+/* More breathing room on the left so the Kp value is not flush
+   against the card border */
+.aurora-status-card .card-body {
+  padding-left: 2.25rem;
 }
 
 .aurora-status-card .display-4 {
@@ -50,5 +67,203 @@
 @media (min-width: 1660px) {
   .aurora-status-row {
     flex: 0 0 100%;
+  }
+}
+
+/* gallery day cards: thumbnail frames with a play affordance */
+.aurora-media-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aurora-update-pending {
+  font-size: .75em;
+  font-style: italic;
+}
+
+.aurora-media-frame {
+  position: relative;
+  cursor: zoom-in;
+  background: rgba(0, 0, 0, .2);
+  border-radius: .25rem;
+}
+
+.aurora-media-frame img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: .25rem;
+}
+
+.aurora-play-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: rgba(255, 255, 255, .9);
+  text-shadow: 0 0 1rem rgba(0, 0, 0, .9);
+  background: rgba(0, 0, 0, .15);
+  border-radius: .25rem;
+  pointer-events: none;
+}
+
+/* full-size media viewer */
+.aurora-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1050;
+  background: rgba(0, 0, 0, .92);
+}
+
+.aurora-modal.open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aurora-modal-close {
+  position: absolute;
+  top: .25rem;
+  right: 1rem;
+  font-size: 2.5rem;
+  line-height: 1;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.aurora-modal-body img,
+.aurora-modal-body video {
+  max-width: 100vw;
+  max-height: 85vh;
+  display: block;
+}
+
+.aurora-modal-caption {
+  color: #eee;
+  text-align: center;
+  padding: .5rem 1rem 0;
+}
+
+/* Aurora borealis icon beside the location name in the header —
+   sized to match the weather logo (4rem), vertically centered by
+   the navbar-brand flex row */
+.aurora-loc-icon {
+  height: 4rem;
+  width: auto;
+  margin-left: 0.75rem;
+}
+
+body.aurora-modal-open {
+  overflow: hidden;
+}
+
+/* NOAA-style R/S/G scale chips (Solar Activity card, Current page) */
+.aurora-rsg {
+  display: inline-grid;
+  /* Transposed: rows are impact names (single line, auto-sized to the
+     longest label), columns are Now / 24h max chips. */
+  grid-template-columns: max-content repeat(2, 3.9rem);
+  max-width: 100%;
+  grid-auto-rows: auto;
+  gap: 0.25rem 0.35rem;
+  align-items: center;
+  justify-items: stretch;
+}
+
+.aurora-rsg-head span,
+.aurora-rsg-row small {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.aurora-rsg-row small {
+  white-space: nowrap;
+}
+
+.aurora-rsg-head span {
+  display: block;
+}
+
+/* Wrappers only group cells for readability; their children place into
+   the parent grid. Without this each wrapper becomes a single grid item
+   and the rows collapse onto one line. */
+.aurora-rsg-head,
+.aurora-rsg-row {
+  display: contents;
+}
+
+.aurora-rsg-head {
+  text-align: center;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.aurora-chip {
+  display: inline-block;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 0.1rem 0.2rem;
+  border-radius: 0.25rem;
+  color: #fff;
+}
+
+.aurora-chip-unknown {
+  background: rgba(128, 128, 128, 0.4);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.aurora-chip-l0 { background: #2e7d32; }
+.aurora-chip-l1 { background: #f9a825; color: #212121; }
+.aurora-chip-l2 { background: #ef6c00; }
+.aurora-chip-l3 { background: #c62828; }
+.aurora-chip-l4 { background: #8e0000; }
+.aurora-chip-l5 { background: #6a1b9a; }
+
+/* ---------------------------------------------------------------------------
+ * Ultra-wide screen guard (>= 1660px)
+ *
+ * NeoWX Material ships a >= 1660px two-pane experiment: .d-flex-xxl turns
+ * the page wrapper into a flex row and .temprow/.graphrow each take 50%.
+ * That only fits the stock Current page's exact two-row structure; on every
+ * other page (Viewing, Timelapses, Solar, week/month/year/...) the stacked
+ * rows end up side by side as shrink-to-fit columns. Disable the experiment
+ * and cap the content width on very wide screens instead. Scope: only the
+ * d-flex-xxl wrappers (almanac/archive/telemetry use plain .container and
+ * are unaffected).
+ * ------------------------------------------------------------------------- */
+@media screen and (min-width: 1660px) {
+  main > div.d-flex-xxl {
+    display: block !important;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .temprow,
+  .graphrow {
+    width: 100% !important;
+  }
+
+  .temprow .col-xl-4 {
+    flex: 0 0 33.3333%;
+    max-width: 33.3333%;
+  }
+
+  .rowdivider {
+    display: flex !important;
   }
 }

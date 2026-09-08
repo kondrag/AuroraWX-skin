@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- V2 "night": rounded night-sky backdrop, mint curtains, lavender tips -->
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#25405A"/>
+  <!-- stars -->
+  <path d="M14 12 l1.2 2.8 2.8 1.2 -2.8 1.2 -1.2 2.8 -1.2 -2.8 -2.8 -1.2 2.8 -1.2 z" fill="#FCF4A5"/>
+  <circle cx="48" cy="14" r="1.4" fill="#EBEBE4" opacity=".9"/>
+  <circle cx="40" cy="22" r="1" fill="#EBEBE4" opacity=".7"/>
+  <!-- curtains with lavender tops -->
+  <path d="M20 46 C16 38 16 26 20 16 C21 13 24 13 25 16 C22 26 22 36 25 44 Z" fill="#5DD1C7"/>
+  <path d="M30 48 C27 38 27 22 31 12 C32 9 36 9 37 12 C34 24 34 36 37 46 Z" fill="#3FB8AD"/>
+  <path d="M43 46 C41 38 41 28 44 18 C45 15 48 15 49 18 C46 27 46 35 48 44 Z" fill="#5DD1C7" opacity=".85"/>
+  <path d="M31 12 C32 9 36 9 37 12 C36 13 32 13 31 12 Z" fill="#D0BAED"/>
+  <path d="M20 16 C21 13 24 13 25 16 C24 17 21 17 20 16 Z" fill="#D0BAED" opacity=".9"/>
+  <!-- hill -->
+  <path d="M4 56 C12 48 24 47 32 51 C42 55 52 53 60 57 L60 60 L4 60 Z" fill="#4A6B8A"/>
+  <!-- pine treeline: stacked-triangle spruces in forest greens -->
+  <g fill="#2F855A">
+    <path d="M9 57 l4.5 -13 4.5 13 z M10.5 57 l3 -8 3 8 z" fill="#276749"/>
+    <path d="M17 57 l4 -11 4 11 z M18.5 57 l2.5 -7 2.5 7 z" fill="#2F855A"/>
+    <path d="M25 57 l5 -15 5 15 z M26.5 57 l3.5 -9 3.5 9 z" fill="#276749"/>
+    <path d="M34 57 l4 -10 4 11 z" fill="#2F855A"/>
+    <path d="M42 57 l5.5 -16 5.5 16 z M43.5 57 l4 -10 4 10 z" fill="#276749"/>
+    <path d="M52 57 l4 -11 4 11 z M53.5 57 l2.5 -7 2.5 7 z" fill="#2F855A"/>
+    <path d="M13 57 l3 -8 3 8 z" fill="#3AA76D"/>
+    <path d="M38 57 l3.5 -9 3.5 9 z" fill="#3AA76D"/>
+    <path d="M48 57 l3 -7 3 7 z" fill="#3AA76D"/>
+  </g>
+</svg>

@@ -117,6 +117,7 @@
     $Extras.Translations[$Extras.language].yesterday | $station.location
   </title>
   #include "head.inc"
+  <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
@@ -125,6 +126,8 @@
 
 <main>
   <div class="container-fluid d-flex-xxl">
+
+    <h2 class="$Extras.color-text mt-4">$Extras.Translations[$Extras.language].title_yesterday $yesterday.dateTime.format("%b %d, %Y")</h2>
 
     <div class="row my-4 temprow align-content-start">
       #for $x in $Extras.Appearance.values_order

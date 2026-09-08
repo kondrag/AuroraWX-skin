@@ -10,7 +10,7 @@
     $Extras.Translations[$Extras.language].aurora | $station.location
   </title>
   #include "head.inc"
-  <link rel="stylesheet" href="css/aurora.css">
+  <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
@@ -27,7 +27,7 @@
           <div class="card-body text-center py-5">
             <h5 class="card-title">$Extras.Translations[$Extras.language].aurora</h5>
             <p class="card-text mb-0">
-              Aurora section is disabled. Set <code>cam_dir</code> under
+              Viewing section is disabled. Set <code>cam_dir</code> under
               <code>[Extras][[Aurora]]</code> to enable it.
             </p>
           </div>
@@ -44,31 +44,42 @@
       "magUrl": "$Extras.Aurora.mag_url",
       "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
       "snapshotRefreshSeconds": $int($Extras.Aurora.snapshot_refresh_seconds),
-      "snapshotUrl": "$aurora.snapshot.url"
+      "cameras": [
+        #set $sep = ""
+        #for $cam in $aurora.cameras
+        $sep{"key": "$cam.key", "url": "$cam.url"}#set $sep = ", "
+        #end for
+      ]
     }
     </script>
 
-    ## Hero: live all-sky image
+    ## Cameras: sky + ground side by side, half width each; click for full size
     <div class="row my-4">
-      <div class="col-12">
+      #for $cam in $aurora.cameras
+      <div class="col-12 col-md-6 mb-3">
         <div class="card aurora-hero">
-          #if $aurora.snapshot.exists
-          <img id="snapshot-img" src="$aurora.snapshot.url" class="aurora-hero-img"
-               alt="Live all-sky camera">
+          #if $cam.exists
+          <img src="$cam.url?v=$cam.mtime"
+               class="aurora-hero-img aurora-modal-trigger"
+               alt="$cam.label" data-snapshot-url="$cam.url"
+               data-camera-key="$cam.key" data-type="image"
+               data-src="$cam.url?v=$cam.mtime"
+               data-title="$cam.label &mdash; full size">
           #else
           <div class="aurora-placeholder d-flex align-items-center justify-content-center">
-            <span class="text-muted">No camera image available</span>
+            <span class="text-muted">No image from the $cam.label.lower() yet</span>
           </div>
           #end if
           <div class="aurora-hero-overlay">
-            #if $aurora.snapshot.exists and not $aurora.snapshot.is_stale
+            <span class="mr-2 font-weight-bold text-white-50">$cam.label</span>
+            #if $cam.exists and not $cam.is_stale
             <span class="badge badge-danger live-badge">Live</span>
-            #elif $aurora.snapshot.exists
+            #elif $cam.exists
             <span class="badge badge-warning">stale</span>
             #end if
-            <span class="ml-2 text-white-50" id="snapshot-age">
-              #if $aurora.snapshot.exists
-              updated $aurora.snapshot.age_minutes min ago
+            <span class="ml-2 text-white-50" data-snapshot-age="$cam.key">
+              #if $cam.exists
+              updated $cam.age_minutes min ago
               #else
               no image
               #end if
@@ -76,12 +87,36 @@
           </div>
         </div>
       </div>
+      #end for
     </div>
+
+    ## Clear Sky Chart (refreshed by the external pipeline inside cam_dir)
+    #if $aurora.clearsky_chart.exists
+    <div class="row my-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title $Extras.color-text">$Extras.Translations[$Extras.language].clear_sky_chart</h5>
+            <img src="$aurora.clearsky_chart.url?v=$aurora.clearsky_chart.mtime"
+                 class="aurora-clearsky-img aurora-modal-trigger"
+                 alt="$Extras.Translations[$Extras.language].clear_sky_chart"
+                 loading="lazy" data-type="image"
+                 data-src="$aurora.clearsky_chart.url?v=$aurora.clearsky_chart.mtime"
+                 data-title="$Extras.Translations[$Extras.language].clear_sky_chart &mdash; full size">
+            <div class="small text-muted mt-1">
+              updated $aurora.clearsky_chart.age_minutes min ago &middot;
+              <a href="https://www.cleardarksky.com/" target="_blank" rel="noopener">cleardarksky.com</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    #end if
 
     ## Activity cards
     <div class="row my-4">
       <div class="col-6 col-md-3 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="kp-now">&mdash;</div>
             <div class="text-muted">Kp index</div>
@@ -89,15 +124,15 @@
         </div>
       </div>
       <div class="col-6 col-md-3 mb-3">
-        <div class="card text-center">
-          <div class="card-body">
+        <div class="card h-100 text-center">
+          <div class="card-body d-flex flex-column justify-content-center">
             <div class="py-2"><span class="badge aurora-badge" id="aurora-badge">&hellip;</span></div>
             <div class="text-muted">Activity</div>
           </div>
         </div>
       </div>
       <div class="col-6 col-md-3 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="bz-now">&mdash;</div>
             <div class="text-muted">Bz (nT)</div>
@@ -105,7 +140,7 @@
         </div>
       </div>
       <div class="col-6 col-md-3 mb-3">
-        <div class="card text-center">
+        <div class="card h-100 text-center">
           <div class="card-body">
             <div class="display-4" id="wind-now">&mdash;</div>
             <div class="text-muted">Solar wind (km/s)</div>
@@ -183,10 +218,20 @@
   </div>
 </main>
 
+<div id="auroraModal" class="aurora-modal" aria-hidden="true" role="dialog"
+     aria-label="Media viewer">
+  <span class="aurora-modal-close" aria-label="Close">&times;</span>
+  <figure class="aurora-modal-dialog">
+    <div class="aurora-modal-body"></div>
+    <figcaption class="aurora-modal-caption"></figcaption>
+  </figure>
+</div>
+
 #include "footer.inc"
 #include "js.inc"
 #if $aurora.enabled
-<script src="js/modules/aurora.js"></script>
+<script src="js/modules/aurora.js?v=$aurora.asset_version"></script>
+<script src="js/aurora-gallery.js?v=$aurora.asset_version"></script>
 #end if
 
 </body>
