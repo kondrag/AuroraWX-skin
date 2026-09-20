@@ -116,7 +116,7 @@
 <html lang="$Extras.language">
 <head>
   <title>
-      $month_name $year_name | $station.location
+      $month_name $year_name
   </title>
   #include "head.inc"
   <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
@@ -130,8 +130,14 @@
 
     <div class="row my-4 temprow align-content-start">
 
-      <div class="col-12 mb-4 text-center">
-        <h2 class="h2-responsive text-dark">$month_name $year_name</h2>
+      <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h2-responsive text-dark mb-0">$month_name $year_name</h2>
+          <select class="form-control w-auto" data-periods="months" data-prefix="month-" data-parse="YYYY-MM" data-fmt="MMM YYYY" onchange="if (this.value) window.location.href = this.value">
+            <option value="" selected disabled>$Extras.Translations[$Extras.language].select_period</option>
+          </select>
+          <script src="periods.js"></script>
+        </div>
       </div>
 
       #for $x in $Extras.Appearance.values_order

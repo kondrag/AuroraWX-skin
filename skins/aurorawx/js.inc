@@ -77,3 +77,32 @@
         },
     }
 </script>
+
+## Period selector dropdowns (day/week/month pages)
+## Populated client-side from periods.js (generated every report run), which
+## the pages carrying a selector load themselves. The <select> declares
+## data-periods (AuroraPeriods key), data-prefix (filename prefix),
+## data-parse (moment parse format) and data-fmt (moment display format).
+## On archive pages the option matching the current page URL is preselected.
+<script type="text/javascript">
+    (function () {
+        var selects = document.querySelectorAll('select[data-periods]');
+        if (!selects.length) return;
+        var current = location.pathname.split('/').pop();
+        for (var s = 0; s < selects.length; s++) {
+            var sel = selects[s];
+            var list = (window.AuroraPeriods || {})[sel.getAttribute('data-periods')] || [];
+            var prefix = sel.getAttribute('data-prefix');
+            var parse = sel.getAttribute('data-parse');
+            var fmt = sel.getAttribute('data-fmt');
+            for (var i = list.length - 1; i >= 0; i--) {
+                var val = list[i];
+                var opt = document.createElement('option');
+                opt.value = prefix + val + '.html';
+                opt.text = moment(val, parse).format(fmt);
+                if (opt.value === current) opt.selected = true;
+                sel.appendChild(opt);
+            }
+        }
+    })();
+</script>

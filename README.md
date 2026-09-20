@@ -12,6 +12,11 @@ Requires WeeWX 5.x. No dependencies beyond WeeWX itself (pure stdlib Python).
 
 - All NeoWX Material pages: current conditions, yesterday/week/month/year,
   archive + NOAA reports, almanac, telemetry, dark mode, PWA manifest
+- **History pages with period selection**: the day, week and month pages
+  have a dropdown to view any past day (`day-YYYY-MM-DD.html`),
+  week (Monday–Sunday, `week-YYYY-MM-DD.html`) or month
+  (`month-YYYY-MM.html`); one page is generated for every period in
+  your database
 - **Aurora hub** (`aurora.html`): live all-sky snapshot, Kp/Bz/solar-wind
   activity cards, viewing conditions (temperature, humidity, wind, moon,
   astronomical darkness), 24 h Kp chart
@@ -101,6 +106,39 @@ NeoWX Material options (`[Extras][[Appearance]]`, `[[Charts]]`,
 `weectl report run` regenerates the skin against your existing database
 without the daemon (it ignores `report_timing`).
 
+## Day / week / month history pages
+
+The day, week and month pages include a "Select a period" dropdown that
+jumps to any past period. The skin generates one HTML page per period of
+your database history (`day-YYYY-MM-DD.html`, `week-YYYY-MM-DD.html`
+named by its Monday, `month-YYYY-MM.html`).
+
+The dropdown options are not baked into the pages. Every report run also
+regenerates a small `periods.js` holding the list of available periods;
+the pages load it and populate the dropdown client-side, so archived
+pages always offer the full current list.
+
+Two things the skin relies on (both are set in `skins/aurorawx/skin.conf`
+and the dev configs — only touch them if you customized your setup):
+
+- `generator_list` must use the skin's Cheetah generator subclass, which
+  adds weekly summary support to WeeWX (WeeWX has none built in):
+  `generator_list = user.aurorawx.generator.AuroraCheetahGenerator, weewx.reportengine.CopyGenerator`
+- Set `week_start = 0` (Monday) in `weewx.conf` `[Station]` so the
+  weekly summary spans and the week statistics binder agree.
+
+Notes:
+
+- **First run can take a while**: one page per day of history means a
+  12-year database renders ~4,400 day pages (plus weeks/months). On a
+  Raspberry Pi class machine expect roughly 3–20 pages/second; later
+  runs only regenerate the newest period of each kind.
+- If a first run is interrupted, some period pages may be missing; delete
+  the affected `day-*`/`week-*`/`month-*` files (or the whole
+  `public_html`) and re-run so they are generated. The dropdowns are
+  unaffected — they come from `periods.js`, which is regenerated on
+  every run.
+
 ## Migration from the old aurora-archive site
 
 1. Install AuroraWX alongside the old UI and run both for one full
@@ -122,7 +160,9 @@ run it after adding/removing skin files; `tests/test_install.py` enforces it.
 
 ### Building the package
 
-    mkdir -p dist && git ls-files install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz --transform 's#^#aurorawx/#'
+    mkdir -p dist && git ls-files --cached --others --exclude-standard install.py bin skins -z | xargs -0 tar czf dist/aurorawx-1.0.0.tar.gz --transform 's#^#aurorawx/#'
+
+`--others` ensures newly added but not-yet-committed files are included.
 
 The archive must contain a single top-level `aurorawx/` directory (WeeWX
 derives the install path from the archive's common prefix).

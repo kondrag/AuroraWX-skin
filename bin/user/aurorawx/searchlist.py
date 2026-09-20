@@ -12,12 +12,27 @@ any failure degrades to a no_data/disabled state (spec section 4).
 """
 
 import os
+import time
 
 import weewx.cheetahgenerator
 
 from user.aurorawx import scanner
 
 ASSET_FILES = ("css/aurora.css", "js/aurora-gallery.js")
+
+
+def format_ts(ts, fmt):
+    """Format an epoch timestamp with a strftime pattern (local time).
+
+    Exposed to templates as $aurora.format_ts. Returns ts unchanged when
+    either argument is missing so template misuse never raises.
+    """
+    if ts is None or not fmt:
+        return ts
+    try:
+        return time.strftime(fmt, time.localtime(ts))
+    except (TypeError, ValueError):
+        return ts
 
 
 class AuroraSearchList(weewx.cheetahgenerator.SearchList):
@@ -102,6 +117,7 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
                          "age_minutes": None, "is_stale": True},
             "aurora_videos": [], "cloud_videos": [], "spaceweather": [],
             "days": [], "cameras": [],
+            "format_ts": format_ts,
             "clearsky_chart": {"exists": False, "url": None, "mtime": None,
                                "age_minutes": None, "is_stale": True},
         }

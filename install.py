@@ -18,6 +18,7 @@ SKIN_FILES = [
     'skins/aurorawx/css/bootstrap.min.css',
     'skins/aurorawx/css/style.css',
     'skins/aurorawx/css/style.min.css',
+    'skins/aurorawx/day-%Y-%m-%d.html.tmpl',
     'skins/aurorawx/fonts/OFL.txt',
     'skins/aurorawx/fonts/Rubik-Light.eot',
     'skins/aurorawx/fonts/Rubik-Light.woff',
@@ -127,6 +128,7 @@ SKIN_FILES = [
     'skins/aurorawx/manifest.json',
     'skins/aurorawx/month-%Y-%m.html.tmpl',
     'skins/aurorawx/month.html.tmpl',
+    'skins/aurorawx/periods.js.tmpl',
     'skins/aurorawx/skin.conf',
     'skins/aurorawx/solar.html.tmpl',
     'skins/aurorawx/telemetry.html.tmpl',
@@ -359,6 +361,7 @@ SKIN_FILES = [
     'skins/aurorawx/weather-icons/svg/wi-wind-beaufort-9.svg',
     'skins/aurorawx/weather-icons/svg/wi-wind-deg.svg',
     'skins/aurorawx/weather-icons/svg/wi-windy.svg',
+    'skins/aurorawx/week-%Y-%m-%d.html.tmpl',
     'skins/aurorawx/week.html.tmpl',
     'skins/aurorawx/year-%Y.html.tmpl',
     'skins/aurorawx/year.html.tmpl',
@@ -390,6 +393,7 @@ class AuroraWXInstaller(ExtensionInstaller):
             "files": [
                 ("bin/user", [
                     "bin/user/aurorawx/__init__.py",
+                    "bin/user/aurorawx/generator.py",
                     "bin/user/aurorawx/scanner.py",
                     "bin/user/aurorawx/searchlist.py",
                 ]),

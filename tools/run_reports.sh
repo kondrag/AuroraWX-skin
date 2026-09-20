@@ -83,6 +83,37 @@ check "$OUT/index.html" '>Past</a>'
 check "$OUT/month.html" 'dropdown-item active" href="month.html'
 check "$OUT/archive.html" 'dropdown-toggle active'
 
+# period-selection dropdowns (day/week/month pages, client-populated from periods.js)
+check "$OUT/yesterday.html" 'Select a period'
+check "$OUT/week.html" 'Select a period'
+check "$OUT/month.html" 'Select a period'
+check "$OUT/day-$(date +%F).html" 'Select a period'
+check "$OUT/periods.js" '"days"'
+check "$OUT/periods.js" '"weeks"'
+check "$OUT/periods.js" '"months"'
+check "$OUT/periods.js" "$(date +%Y-%m)"
+for p in yesterday week month; do
+  kind=days
+  [ "$p" = week ] && kind=weeks
+  [ "$p" = month ] && kind=months
+  check "$OUT/$p.html" "data-periods=\"$kind\""
+  check "$OUT/$p.html" 'src="periods.js"'
+  check "$OUT/$p.html" 'd-flex justify-content-between align-items-center'
+  check_not "$OUT/$p.html" '<option value="day-'
+done
+check "$OUT/day-$(date +%F).html" 'data-periods="days"'
+check "$OUT/day-$(date +%F).html" 'src="periods.js"'
+check "$OUT/day-$(date +%F).html" 'd-flex justify-content-between align-items-center'
+check_not "$OUT/day-$(date +%F).html" '<option value="day-'
+# current week archive page: Monday-start range title (requires week_start = 0
+# in every scenario conf; a Sunday week_start shifts the binder one day back)
+read -r WEEKFILE WEEKTITLE <<EOF
+$(.venv/bin/python -c "import datetime; t=datetime.date.today(); m=t-datetime.timedelta(days=t.weekday()); e=m+datetime.timedelta(days=6); print('week-'+m.strftime('%Y-%m-%d')+'.html', m.strftime('%b %d, %Y')+' '+chr(0x2013)+' '+e.strftime('%b %d, %Y'))")
+EOF
+check "$OUT/$WEEKFILE" "$WEEKTITLE"
+ls "$OUT"/week-*.html >/dev/null || { echo "FAIL: no week-*.html generated"; exit 1; }
+echo "ok: week-*.html files generated"
+
 run_scenario partial
 check "$OUT/aurora.html" 'stale data'
 check_not "$OUT/aurora.html" 'clearsky_chart.gif'

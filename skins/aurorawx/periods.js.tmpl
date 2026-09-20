@@ -1,0 +1,29 @@
+#encoding UTF-8
+## +-------------------------------------------------------------------------+
+## |    periods.js.tmpl     Generated period lists for the period selectors  |
+## +-------------------------------------------------------------------------+
+
+## Generated on every report run (ToDate generation). Holds the list of
+## available day, week and month archive pages; the period selector dropdowns
+## on the day/week/month pages populate themselves client-side from this
+## file, so the pages themselves stay small and the dropdowns are always
+## current. Values are chronological: days/weeks are 'YYYY-MM-DD' (a week
+## is named by its Monday), months are 'YYYY-MM'.
+
+window.AuroraPeriods = {
+  "days": [
+    #for $val in $SummaryByDay
+    "$val",
+    #end for
+  ],
+  "weeks": [
+    #for $val in $SummaryByWeek
+    "$val",
+    #end for
+  ],
+  "months": [
+    #for $val in $SummaryByMonth
+    "$val",
+    #end for
+  ]
+};

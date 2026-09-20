@@ -170,3 +170,31 @@ def test_scanner_crash_is_contained(monkeypatch):
     assert "error" in aurora
     for key in ("snapshot", "aurora_videos", "cloud_videos", "spaceweather", "days"):
         assert key in aurora
+
+
+def local_ts(y, mo, d):
+    import time
+    return time.mktime((y, mo, d, 12, 0, 0, 0, 0, -1))
+
+
+def test_format_ts_formats_epoch_local_time():
+    import os
+    import time
+    os.environ["TZ"] = "America/Los_Angeles"
+    time.tzset()
+    from user.aurorawx.searchlist import format_ts
+    assert format_ts(local_ts(2025, 9, 15), "%b %d, %Y") == "Sep 15, 2025"
+
+
+def test_format_ts_guards_bad_input():
+    from user.aurorawx.searchlist import format_ts
+    assert format_ts(None, "%b %d, %Y") is None
+    assert format_ts(12345, None) == 12345
+
+
+def test_format_ts_exposed_in_aurora_namespace():
+    from user.aurorawx.searchlist import format_ts
+    aurora = make_sle(None).get_extension_list(None, None)[0]["aurora"]
+    assert aurora["format_ts"] is format_ts
+    assert aurora["format_ts"](local_ts(2026, 9, 14), "%b %d, %Y") == "Sep 14, 2026"
+

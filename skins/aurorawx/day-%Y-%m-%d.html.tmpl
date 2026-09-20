@@ -1,25 +1,23 @@
 #encoding UTF-8
 ## +-------------------------------------------------------------------------+
-## |    week.html.tmpl                      Template file for "week" page    |
+## |    day-%Y-%m-%d.html.tmpl    Template file for "daily archive" page    |
 ## +-------------------------------------------------------------------------+
-
-#attr $active_nav = 'week'
 
 ## +-------------------------------------------------------------------------+
 ## | Template for display card of values (left column)                       |
 ## +-------------------------------------------------------------------------+
 
 #def valuesCard($name)
-  #if $getVar('week.' + name + '.has_data')
-  <div class="col-12 col-md-6 col-xl-4 mb-4">
+  #if $getVar('day.' + name + '.has_data')
+  <div class="col-12 col-lg-6 mb-4">
     <div class="card">
       <div class="card-body text-center">
         <h3 class="h5-responsive $Extras.color-text">
           $getVar('obs.label.' + name)
           #if $name == 'windSpeed'
 
-            <i class="wi wi-wind from-$week.windDir.avg.formatted-deg"
-               title="$week.windDir.avg.formatted°" data-toggle="tooltip"></i>
+            <i class="wi wi-wind from-$day.windDir.avg.formatted-deg"
+               title="$day.windDir.avg.formatted°" data-toggle="tooltip"></i>
 
           #end if
         </h3>
@@ -28,19 +26,19 @@
 
         <div class="row">
           <div class="col-3 text-muted font-small">
-            $week.wind.avg <br>
+            $day.wind.avg <br>
             $Extras.Translations[$Extras.language].avg
           </div>
           <div class="col-6">
             <h4 class="h2-responsive">
-              $week.windSpeed.max $week.windDir.avg.ordinal_compass
+              $day.windSpeed.max $day.windDir.avg.ordinal_compass
             </h4>
           </div>
           <div class="col-3 text-muted font-small hi-text">
-            $week.wind.max $week.wind.gustdir.ordinal_compass <br>
-            <i class="wi wi-wind from-$week.wind.gustdir.formatted-deg mr-2"
-               title="$week.wind.gustdir.formatted°" data-toggle="tooltip"></i>
-            ($week.wind.maxtime.format($Extras.Formatting.datetime))
+            $day.wind.max $day.wind.gustdir.ordinal_compass <br>
+            <i class="wi wi-wind from-$day.wind.gustdir.formatted-deg mr-2"
+               title="$day.wind.gustdir.formatted°" data-toggle="tooltip"></i>
+            ($day.wind.maxtime.format($Extras.Formatting.datetime))
           </div>
         </div>
 
@@ -51,11 +49,11 @@
             
           </div>
           <div class="col-6">
-            <h4 class="h2-responsive">$week.rain.sum</h4>
+            <h4 class="h2-responsive">$day.rain.sum</h4>
           </div>
           <div class="col-3 text-muted font-small hi-text">
-            $week.rainRate.max <br>
-            ($week.rainRate.maxtime.format($Extras.Formatting.datetime))
+            $day.rainRate.max <br>
+            ($day.rainRate.maxtime.format($Extras.Formatting.datetime))
           </div>
         </div>
 
@@ -63,15 +61,15 @@
 
         <div class="row">
           <div class="col-3 text-muted font-small lo-text">
-            $getVar('week.' + name + '.min') <br>
-            ($getVar('week.' + name + '.mintime').format($Extras.Formatting.datetime))
+            $getVar('day.' + name + '.min') <br>
+            ($getVar('day.' + name + '.mintime').format($Extras.Formatting.datetime))
           </div>
           <div class="col-6">
-            <h4 class="h2-responsive">$getVar('week.' + name + '.avg')</h4>
+            <h4 class="h2-responsive">$getVar('day.' + name + '.avg')</h4>
           </div>
           <div class="col-3 text-muted font-small hi-text">
-            $getVar('week.' + name + '.max') <br>
-            ($getVar('week.' + name + '.maxtime').format($Extras.Formatting.datetime))
+            $getVar('day.' + name + '.max') <br>
+            ($getVar('day.' + name + '.maxtime').format($Extras.Formatting.datetime))
           </div>
         </div>
 
@@ -89,7 +87,7 @@
 ## +-------------------------------------------------------------------------+
 
 #def chartCard($name, $id, $name2 = "XX")
-  #if ($getVar('week.' + name + '.has_data') or $name == "windvec") and $name != "appTemp"
+  #if ($getVar('day.' + name + '.has_data') or $name == "windvec") and $name != "appTemp"
     <div class="col-12 col-xl-6 mb-4">
       <div class="card">
         <div class="card-body text-center">
@@ -116,31 +114,35 @@
 <html lang="$Extras.language">
 <head>
   <title>
-    $Extras.Translations[$Extras.language][$active_nav] | $station.location
+    $day.dateTime.format("%b %d, %Y")
   </title>
   #include "head.inc"
   <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
 </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
+#attr $active_nav = 'archive'
 #include "header.inc"
 
 <main>
   <div class="container-fluid d-flex-xxl">
 
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <h2 class="$Extras.color-text mb-0">$Extras.Translations[$Extras.language].title_week: $week.dateTime.format("%b %d, %Y") to $current.dateTime.format("%b %d, %Y")</h2>
-      <select class="form-control w-auto" data-periods="weeks" data-prefix="week-" data-parse="YYYY-MM-DD" data-fmt="MMM DD, YYYY" onchange="if (this.value) window.location.href = this.value">
-        <option value="" selected disabled>$Extras.Translations[$Extras.language].select_period</option>
-      </select>
-      <script src="periods.js"></script>
-    </div>
-
     <div class="row my-4 temprow align-content-start">
+
+      <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h2-responsive text-dark mb-0">$day.dateTime.format("%b %d, %Y")</h2>
+          <select class="form-control w-auto" data-periods="days" data-prefix="day-" data-parse="YYYY-MM-DD" data-fmt="MMM DD, YYYY" onchange="if (this.value) window.location.href = this.value">
+            <option value="" selected disabled>$Extras.Translations[$Extras.language].select_period</option>
+          </select>
+          <script src="periods.js"></script>
+        </div>
+      </div>
+
       #for $x in $Extras.Appearance.values_order
 
       #if $x == "ET"
-        #if $week.ET.has_data and $week.ET.sum.raw is not None and $week.ET.sum.raw > 0.0
+        #if $day.ET.has_data and $day.ET.sum.raw is not None and $day.ET.sum.raw > 0.0
           $valuesCard('ET')
         #end if
       #else
@@ -156,7 +158,7 @@
       #for $x in $Extras.Appearance.charts_order
 
       #if $x == "ET"
-        #if $week.ET.has_data and $week.ET.sum.raw is not None and $week.ET.sum.raw > 0.0
+        #if $day.ET.has_data and $day.ET.sum.raw is not None and $day.ET.sum.raw > 0.0
           $chartCard($x, $x + 'chart')
         #end if
       #else
@@ -184,12 +186,12 @@
 ## +-------------------------------------------------------------------------+
 
 #def getChartData($name, $column)
-  #set current_interval = int($Extras.Charts.week_timespan)
+  #set current_interval = int($Extras.Charts.current_timespan)
   #if $name == "rain"
-    #set current_interval = int($Extras.Charts.week_rain_timespan)
+    #set current_interval = int($Extras.Charts.current_rain_timespan)
   #end if
 
-  #for $record in $span($week_delta=1).spans(interval=current_interval)
+  #for $record in $day.spans(interval=current_interval)
     #try
       #set val = $getattr($record, $name)
       #set data = $getattr($val, $column).format(add_label=False, localize=False, None_string="null")
@@ -218,6 +220,22 @@
 ## Only add JS chart code if in array
 #if $name in $Extras.Appearance.charts_order
 
+## Get chart data
+
+series1data = [ $getChartData(series1, column) ];
+
+#if $series2 != ""
+series2data = [ $getChartData(series2, column) ];
+#end if
+
+#if $series3 != ""
+series3data = [ $getChartData(series3, column) ];
+#end if
+
+#if $series4 != ""
+series4data = [ $getChartData(series4, column) ];
+#end if
+
 new ApexCharts(document.querySelector('#$id'), {
   ...graph_${type}_config,
   yaxis: {
@@ -230,24 +248,24 @@ new ApexCharts(document.querySelector('#$id'), {
   series: [
     {
       name: "$getVar('obs.label.' + series1)",
-      data: [ $getChartData(series1, column) ]
+      data: series1data
     }
-    #if $series2 != "" and $getVar('week.' + series2 + '.has_data')
+    #if $series2 != "" and $getVar('day.' + series2 + '.has_data')
     ,{
       name: "$getVar('obs.label.' + series2)",
-      data: [ $getChartData(series2, column) ]
+      data: series2data
     }
     #end if
-    #if $series3 != "" and $getVar('week.' + series3 + '.has_data')
+    #if $series3 != "" and $getVar('day.' + series3 + '.has_data')
     ,{
       name: "$getVar('obs.label.' + series3)",
-      data: [ $getChartData(series3, column) ]
+      data: series3data
     }
     #end if
-    #if $series4 != "" and $getVar('week.' + series4 + '.has_data')
+    #if $series4 != "" and $getVar('day.' + series4 + '.has_data')
     ,{
       name: "$getVar('obs.label.' + series4)",
-      data: [ $getChartData(series4, column) ]
+      data: series4data
     }
     #end if
   ]
@@ -262,6 +280,9 @@ new ApexCharts(document.querySelector('#$id'), {
 ## +-------------------------------------------------------------------------+
 
 <script type="text/javascript">
+  // Declare variables
+  var series1data = null;
+
   // Config templates
 
   var graph_area_config = {
@@ -279,7 +300,7 @@ new ApexCharts(document.querySelector('#$id'), {
   $getChartJsCode("outTemp", "outTempchart", "area", "outTemp", "dewpoint")
 
   // Wind chill + Heat index + optional appTemp
-  #if "appTemp" in $Extras.Appearance.charts_order and $week.appTemp.has_data
+  #if "appTemp" in $Extras.Appearance.charts_order and $day.appTemp.has_data
   $getChartJsCode("windchill", "windchillchart", "area", "windchill", "heatindex", "avg", "appTemp")
   #else
   $getChartJsCode("windchill", "windchillchart", "area", "windchill", "heatindex")
@@ -298,48 +319,48 @@ new ApexCharts(document.querySelector('#$id'), {
   $getChartJsCode("outHumidity", "outHumiditychart", "area", "outHumidity")
 
   // UV / ET / Radiation
-  #if $week.UV.has_data
+  #if $day.UV.has_data
   $getChartJsCode("UV", "UVchart", "area", "UV", "", "max")
   #end if
 
-  #if $week.ET.has_data and $week.ET.sum.raw is not None and $week.ET.sum.raw > 0.0
+  #if $day.ET.has_data and $day.ET.sum.raw is not None and $day.ET.sum.raw > 0.0
   $getChartJsCode("ET", "ETchart", "area", "ET", "", "max")
   #end if
 
-  #if $week.radiation.has_data
+  #if $day.radiation.has_data
   $getChartJsCode("radiation", "radiationchart", "area", "radiation", "", "max")
   #end if
 
   // inTemp + inHumidity
   $getChartJsCode("inTemp", "inTempchart", "area", "inTemp")
   $getChartJsCode("inHumidity", "inHumiditychart", "area", "inHumidity")
-  
+
   // Other sensors
-  #if $week.snowDepth.has_data
+  #if $day.snowDepth.has_data
   $getChartJsCode("snowDepth", "snowDepthchart", "bar", "snowDepth", "", "sum")
   #end if
 
-  #if $week.leafTemp1.has_data or $week.leafTemp2.has_data
+  #if $day.leafTemp1.has_data or $day.leafTemp2.has_data
   $getChartJsCode("leafTemp", "leafTempchart", "area", "leafTemp1", "leafTemp2", "avg")
   #end if
 
-  #if $week.soilTemp1.has_data or $week.soilTemp2.has_data
+  #if $day.soilTemp1.has_data or $day.soilTemp2.has_data
   $getChartJsCode("soilTempA", "soilTempAchart", "area", "soilTemp1", "soilTemp2", "avg")
   #end if
 
-  #if $week.soilTemp3.has_data or $week.soilTemp4.has_data
+  #if $day.soilTemp3.has_data or $day.soilTemp4.has_data
   $getChartJsCode("soilTempB", "soilTempBchart", "area", "soilTemp3", "soilTemp4", "avg")
   #end if
 
-  #if $week.soilMoist1.has_data or $week.soilMoist2.has_data
+  #if $day.soilMoist1.has_data or $day.soilMoist2.has_data
   $getChartJsCode("soilMoistA", "soilMoistAchart", "area", "soilMoist1", "soilMoist2", "avg")
   #end if
 
-  #if $week.soilMoist3.has_data or $week.soilMoist4.has_data
+  #if $day.soilMoist3.has_data or $day.soilMoist4.has_data
   $getChartJsCode("soilMoistB", "soilMoistBchart", "area", "soilMoist3", "soilMoist4", "avg")
   #end if
 
-  #if $week.cloudbase.has_data
+  #if $day.cloudbase.has_data
   $getChartJsCode("cloudbase", "cloudbasechart", "area", "cloudbase", "avg")
   #end if
 
@@ -356,7 +377,7 @@ new ApexCharts(document.querySelector('#$id'), {
   };
 
   var raw_data = [
-  #for $record in $span($week_delta=1).spans(interval=int($Extras.Charts.week_timespan))
+  #for $record in $day.spans(interval=int($Extras.Charts.current_timespan))
   {
     'dir': "$record.windDir.avg.raw",
     'speed': "$record.windSpeed.avg.raw",
@@ -449,69 +470,69 @@ new ApexCharts(document.querySelector('#$id'), {
 
   // extraTemp 1-8
 
-  #if $week.extraTemp1.has_data
+  #if $day.extraTemp1.has_data
   $getChartJsCode("extraTemp1", "extraTemp1chart", "area", "extraTemp1")
   #end if
 
-  #if $week.extraTemp2.has_data
+  #if $day.extraTemp2.has_data
   $getChartJsCode("extraTemp2", "extraTemp2chart", "area", "extraTemp2")
   #end if
 
-  #if $week.extraTemp3.has_data
+  #if $day.extraTemp3.has_data
   $getChartJsCode("extraTemp3", "extraTemp3chart", "area", "extraTemp3")
   #end if
 
-  #if $week.extraTemp4.has_data
+  #if $day.extraTemp4.has_data
   $getChartJsCode("extraTemp4", "extraTemp4chart", "area", "extraTemp4")
   #end if
 
-  #if $week.extraTemp5.has_data
+  #if $day.extraTemp5.has_data
   $getChartJsCode("extraTemp5", "extraTemp5chart", "area", "extraTemp5")
   #end if
 
-  #if $week.extraTemp6.has_data
+  #if $day.extraTemp6.has_data
   $getChartJsCode("extraTemp6", "extraTemp6chart", "area", "extraTemp6")
   #end if
 
-  #if $week.extraTemp7.has_data
+  #if $day.extraTemp7.has_data
   $getChartJsCode("extraTemp7", "extraTemp7chart", "area", "extraTemp7")
   #end if
 
-  #if $week.extraTemp8.has_data
+  #if $day.extraTemp8.has_data
   $getChartJsCode("extraTemp8", "extraTemp8chart", "area", "extraTemp8")
   #end if
 
   // extraHumid 1-8
 
-  #if $week.extraHumid1.has_data
+  #if $day.extraHumid1.has_data
   $getChartJsCode("extraHumid1", "extraHumid1chart", "area", "extraHumid1")
   #end if
 
-  #if $week.extraHumid2.has_data
+  #if $day.extraHumid2.has_data
   $getChartJsCode("extraHumid2", "extraHumid2chart", "area", "extraHumid2")
   #end if
 
-  #if $week.extraHumid3.has_data
+  #if $day.extraHumid3.has_data
   $getChartJsCode("extraHumid3", "extraHumid3chart", "area", "extraHumid3")
   #end if
 
-  #if $week.extraHumid4.has_data
+  #if $day.extraHumid4.has_data
   $getChartJsCode("extraHumid4", "extraHumid4chart", "area", "extraHumid4")
   #end if
 
-  #if $week.extraHumid5.has_data
+  #if $day.extraHumid5.has_data
   $getChartJsCode("extraHumid5", "extraHumid5chart", "area", "extraHumid5")
   #end if
 
-  #if $week.extraHumid6.has_data
+  #if $day.extraHumid6.has_data
   $getChartJsCode("extraHumid6", "extraHumid6chart", "area", "extraHumid6")
   #end if
 
-  #if $week.extraHumid7.has_data
+  #if $day.extraHumid7.has_data
   $getChartJsCode("extraHumid7", "extraHumid7chart", "area", "extraHumid7")
   #end if
 
-  #if $week.extraHumid8.has_data
+  #if $day.extraHumid8.has_data
   $getChartJsCode("extraHumid8", "extraHumid8chart", "area", "extraHumid8")
   #end if
 
