@@ -198,3 +198,97 @@ def test_format_ts_exposed_in_aurora_namespace():
     assert aurora["format_ts"] is format_ts
     assert aurora["format_ts"](local_ts(2026, 9, 14), "%b %d, %Y") == "Sep 14, 2026"
 
+
+def make_archive_sle(cam_dir, cam_url="/cam", **extra):
+    cfg = configobj.ConfigObj()
+    aurora_cfg = {"cam_dir": str(cam_dir), "cam_url": cam_url}
+    aurora_cfg.update(extra)
+    cfg["Extras"] = {"Aurora": aurora_cfg}
+    return AuroraSearchList(FakeGenerator(cfg))
+
+
+def test_calendar_config_defaults():
+    sle = make_sle(None)
+    assert sle.calendar_days == 35
+    assert sle.latitude == 45.1666
+    assert sle.longitude == -90.8076
+    assert sle.tz_name == "America/Chicago"
+
+
+def test_calendar_config_parsed_and_garbage_falls_back():
+    sle = make_archive_sle("/tmp", calendar_days="42", latitude="45.5",
+                           longitude="-91.25", tz_name="Europe/Paris")
+    assert sle.calendar_days == 42
+    assert sle.latitude == 45.5
+    assert sle.longitude == -91.25
+    assert sle.tz_name == "Europe/Paris"
+    bad = make_archive_sle("/tmp", calendar_days="abc", latitude="x", longitude="y")
+    assert bad.calendar_days == 35
+    assert bad.latitude == 45.1666
+    assert bad.longitude == -90.8076
+
+
+def test_calendar_present_and_urls_prefixed(tmp_path):
+    import time
+    from test_scanner_archive import seed_date_dir, date_compacts
+    for date in date_compacts(time.time(), 3):
+        seed_date_dir(tmp_path, date)
+    aurora = make_archive_sle(tmp_path).get_extension_list(None, None)[0]["aurora"]
+    cal = aurora["calendar"]
+    assert cal["enabled"] is True
+    cells = [c for week in cal["weeks"] for c in week if c]
+    with_video = [c for c in cells if c["aurora_video"]]
+    assert with_video
+    cell = with_video[0]
+    assert cell["aurora_video"].startswith("/cam/d/")
+    assert cell["aurora_thumbnail"].startswith("/cam/d/")
+    assert cell["spaceweather"].startswith("/cam/d/")
+    assert "kp_peak" in cell
+
+
+def test_calendar_present_when_disabled():
+    aurora = make_sle(None).get_extension_list(None, None)[0]["aurora"]
+    assert aurora["calendar"]["enabled"] is False
+    assert aurora["calendar"]["weeks"] == []
+    # Cheetah's NameMapper needs the key present even when unset
+    assert aurora["calendar"]["error"] is None
+
+
+def test_calendar_success_result_has_error_key(tmp_path):
+    import time
+    from test_scanner_archive import seed_date_dir, date_compacts
+    for date in date_compacts(time.time(), 1):
+        seed_date_dir(tmp_path, date)
+    aurora = make_archive_sle(tmp_path).get_extension_list(None, None)[0]["aurora"]
+    assert aurora["calendar"]["error"] is None
+
+
+def test_archive_scan_crash_is_contained(monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated archive crash")
+    monkeypatch.setattr(scanner, "scan_archive", boom)
+    aurora = make_sle("/tmp").get_extension_list(None, None)[0]["aurora"]
+    assert aurora["enabled"] is True
+    assert aurora["status"] == "no_data"
+    assert aurora["calendar"]["enabled"] is False
+
+
+
+def test_latest_card_urls_get_alias_prefix(tmp_path):
+    import time
+    compact = time.strftime("%Y%m%d", time.localtime(NOW - 86400))
+    target_dir = tmp_path / "d" / compact
+    make(target_dir / ("AuroraCam_%s_640x360.mp4" % compact), mtime=NOW - 86400)
+    (tmp_path / "AuroraCam_latest.mp4").symlink_to(
+        target_dir / ("AuroraCam_%s_640x360.mp4" % compact))
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    aurora = make_sle(tmp_path, cam_url="/cam").get_extension_list(
+        None, None)[0]["aurora"]
+    assert aurora["latest"]["aurora_video"] == "/cam/AuroraCam_latest.mp4"
+
+
+def test_latest_card_urls_untouched_when_absent(tmp_path):
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    aurora = make_sle(tmp_path, cam_url="/cam").get_extension_list(
+        None, None)[0]["aurora"]
+    assert aurora["latest"] is None

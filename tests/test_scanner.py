@@ -545,3 +545,96 @@ def test_clearsky_chart_custom_filename(tmp_path):
     assert chart["exists"] is True
     assert chart["url"] == "mychart.gif"
     assert chart["is_stale"] is True  # 2h old > 30 min default
+
+
+# --- latest-card tests -----------------------------------------------------
+
+def _seed_archive_target(cam_dir, compact, kind):
+    """Real file in d/<date>/ (mirrors production symlink targets)."""
+    if kind == "aurora":
+        name = "AuroraCam_%s_640x360.mp4" % compact
+    elif kind == "aurora_thumb":
+        name = "AuroraCam_%s.thumbnail.jpg" % compact
+    elif kind == "cloud":
+        name = "CloudCam_%s_640x360.mp4" % compact
+    else:
+        name = "SpaceWeather_%s.gif" % compact
+    path = cam_dir / "d" / compact / name
+    make(path, mtime=NOW - 86400, size=2048)
+    return path
+
+
+def _link_latest(cam_dir, name, target):
+    link = cam_dir / name
+    link.symlink_to(target)
+
+
+def test_latest_card_built_from_latest_links(tmp_path):
+    compact = time.strftime("%Y%m%d", time.localtime(NOW - 86400))
+    iso = time.strftime("%Y-%m-%d", time.localtime(NOW - 86400))
+    for kind, name in (
+        ("aurora", "AuroraCam_latest.mp4"),
+        ("aurora_thumb", "AuroraCam_latest.thumbnail.jpg"),
+        ("cloud", "CloudCam_latest.mp4"),
+        ("cloud_thumb", "CloudCam_latest.thumbnail.jpg"),
+        ("spaceweather", "SpaceWeather_latest.gif"),
+    ):
+        _link_latest(tmp_path, name, _seed_archive_target(tmp_path, compact, kind))
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    card = r["latest"]
+    assert card["date_iso"] == iso
+    assert card["day_name"] == time.strftime("%A", time.localtime(NOW - 86400))
+    assert card["is_today"] == (iso == time.strftime(
+        "%Y-%m-%d", time.localtime(NOW)))
+    assert card["aurora_video"] == "AuroraCam_latest.mp4"
+    assert card["aurora_thumbnail"] == "AuroraCam_latest.thumbnail.jpg"
+    assert card["cloud_video"] == "CloudCam_latest.mp4"
+    assert card["spaceweather"] == "SpaceWeather_latest.gif"
+    assert card["aurora_mtime"] == NOW - 86400
+    assert card["aurora_pending"] is False
+    assert card["latest"] is True
+
+
+def test_latest_files_excluded_from_weekday_lists(tmp_path):
+    compact = time.strftime("%Y%m%d", time.localtime(NOW - 86400))
+    for kind, name in (
+        ("aurora", "AuroraCam_latest.mp4"),
+        ("cloud", "CloudCam_latest.mp4"),
+        ("spaceweather", "SpaceWeather_latest.gif"),
+    ):
+        _link_latest(tmp_path, name, _seed_archive_target(tmp_path, compact, kind))
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["aurora_videos"] == []
+    assert r["cloud_videos"] == []
+    assert r["spaceweather"] == []
+
+
+def test_latest_card_partial_assets(tmp_path):
+    compact = time.strftime("%Y%m%d", time.localtime(NOW - 86400))
+    _link_latest(tmp_path, "AuroraCam_latest.mp4",
+                 _seed_archive_target(tmp_path, compact, "aurora"))
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    card = r["latest"]
+    assert card["aurora_video"] == "AuroraCam_latest.mp4"
+    assert card["aurora_thumbnail"] is None
+    assert card["cloud_video"] is None
+    assert card["spaceweather"] is None
+
+
+def test_latest_card_absent_without_latest_files(tmp_path):
+    seed_week(tmp_path, scanner.AURORA_PREFIX, ".mp4")
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["latest"] is None
+
+
+def test_latest_card_plain_file_uses_mtime_date(tmp_path):
+    # no date in the target path (not a symlink): fall back to mtime
+    make(tmp_path / "AuroraCam_latest.mp4", mtime=NOW - 3 * 86400)
+    make(tmp_path / "snapshot.jpg", mtime=NOW - 60)
+    r = scanner.scan_directory(tmp_path, now_ts=NOW)
+    assert r["latest"]["date_iso"] == time.strftime(
+        "%Y-%m-%d", time.localtime(NOW - 3 * 86400))

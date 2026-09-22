@@ -33,7 +33,32 @@ touch -d '1 minute ago' "$FIX/full/Driveway.jpg"
 dd if=/dev/zero of="$FIX/full/clearsky_chart.gif" bs=1024 count=28 2>/dev/null
 touch -d '5 minutes ago' "$FIX/full/clearsky_chart.gif"
 
+# date-stamped archive tree (d/<YYYYMMDD>) for the Timelapses calendar;
+# partial/empty intentionally have no d/ so the calendar renders its
+# "not available" fallback there
+for i in 1 2 3 4; do
+  D=$(date -d "$i days ago" +%Y%m%d)
+  mkdir -p "$FIX/full/d/$D"
+  dd if=/dev/zero of="$FIX/full/d/$D/AuroraCam_${D}_640x360.mp4" bs=1024 count=64 2>/dev/null
+  dd if=/dev/zero of="$FIX/full/d/$D/AuroraCam_${D}.thumbnail.jpg" bs=1024 count=8 2>/dev/null
+  dd if=/dev/zero of="$FIX/full/d/$D/SpaceWeather_${D}.gif" bs=1024 count=48 2>/dev/null
+  touch -d "$i days ago" "$FIX/full/d/$D"/*
+done
+# Kp samples inside the night window of the most recent archived date
+# (03Z/09Z are safely between nautical dusk and dawn at the site year-round)
+KD=$(date -d '1 day ago' +%Y%m%d)
+cat > "$FIX/full/d/$KD/k-index_${KD}.json" <<EOF
+[{"time_tag": "$(date -u -d '1 day ago' +%Y-%m-%dT)03:00:00", "Kp": 4.67, "a_running": 22, "station_count": 8},
+ {"time_tag": "$(date -u -d '1 day ago' +%Y-%m-%dT)09:00:00", "Kp": 6.33, "a_running": 32, "station_count": 8}]
+EOF
+
 OLD_DAY=$(date -d '3 days ago' +%A)
+# "latest" staging links (production: refreshed every pipeline run by
+# link_archive_to_site.sh) pointing at the newest archived day
+LD=$(date -d '1 day ago' +%Y%m%d)
+ln -sfn "d/$LD/AuroraCam_${LD}_640x360.mp4" "$FIX/full/AuroraCam_latest.mp4"
+ln -sfn "d/$LD/AuroraCam_${LD}.thumbnail.jpg" "$FIX/full/AuroraCam_latest.thumbnail.jpg"
+ln -sfn "d/$LD/SpaceWeather_${LD}.gif" "$FIX/full/SpaceWeather_latest.gif"
 dd if=/dev/zero of="$FIX/partial/AuroraCam_${OLD_DAY}.mp4" bs=1024 count=64 2>/dev/null
 dd if=/dev/zero of="$FIX/partial/CloudCam_${OLD_DAY}.mp4" bs=1024 count=64 2>/dev/null
 dd if=/dev/zero of="$FIX/partial/SpaceWeather_${OLD_DAY}.gif" bs=1024 count=48 2>/dev/null

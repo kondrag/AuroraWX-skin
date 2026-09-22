@@ -83,6 +83,38 @@ def test_generator_dict_is_patched_for_summary_by_week():
     assert CheetahGenerator.format_dict["SummaryByWeek"] == "%Y-%m-%d"
 
 
+def test_getfilename_unpatched():
+    # getFileName must remain weeutil's plain basename implementation.
+    # CheetahGenerator._prepGen already appends dirname(template) to
+    # HTML_ROOT, so no directory-preserving wrapper is needed; a wrapper
+    # here is actively harmful because it receives the ABSOLUTE template
+    # path and os.path.join(dest, absolute) would write into the skin dir.
+    import weeutil.weeutil
+    from weewx import cheetahgenerator, reportengine
+
+    assert cheetahgenerator.getFileName is weeutil.weeutil.getFileName
+    assert reportengine.getFileName is weeutil.weeutil.getFileName
+
+
+def test_getfilename_bare_templates_stay_in_root():
+    # Templates without a directory keep landing in the site root.
+    from weewx import cheetahgenerator
+
+    filename = cheetahgenerator.getFileName("NOAA-%Y-%m.txt.tmpl", ts(2014, 9, 8))
+    assert filename == "NOAA-2014-09.txt"
+
+
+def test_getfilename_relocates_noaa_into_archive_dir():
+    # getFileName basenames: 'archive/NOAA-%Y-%m.txt.tmpl' -> 'NOAA-2014-09.txt'.
+    # The archive/ prefix of the OUTPUT comes from _prepGen appending
+    # dirname(template) to HTML_ROOT, not from getFileName.
+    from weewx import cheetahgenerator
+
+    filename = cheetahgenerator.getFileName(
+        "archive/NOAA-%Y-%m.txt.tmpl", ts(2014, 9, 8))
+    assert filename == "NOAA-2014-09.txt"
+
+
 def test_subclass_inherits():
     assert issubclass(AuroraCheetahGenerator, __import__(
         "weewx.cheetahgenerator", fromlist=["CheetahGenerator"]).CheetahGenerator)

@@ -100,7 +100,7 @@
                 var opt = document.createElement('option');
                 opt.value = prefix + val + '.html';
                 opt.text = moment(val, parse).format(fmt);
-                if (opt.value === current) opt.selected = true;
+                if (opt.value.split('/').pop() === current) opt.selected = true;
                 sel.appendChild(opt);
             }
         }

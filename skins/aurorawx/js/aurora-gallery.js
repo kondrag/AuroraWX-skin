@@ -88,4 +88,16 @@
     }
     img.addEventListener("error", hide);
   });
+
+  /* Calendar thumbnails: hide broken images (stale symlink edge cases).
+   * The cell itself is the modal trigger, so it stays clickable. */
+  document.querySelectorAll(".tl-cell-img").forEach(function (img) {
+    function hide() {
+      img.style.display = "none";
+    }
+    if (img.complete && img.naturalWidth === 0) {
+      hide();
+    }
+    img.addEventListener("error", hide);
+  });
 })();

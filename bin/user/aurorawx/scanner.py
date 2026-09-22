@@ -20,8 +20,13 @@ overwrites the files for the current week.
 Pure stdlib, no WeeWX imports. scan_directory() never raises.
 """
 
+import json
+import math
 import os
+import re
 import time
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 AURORA_PREFIX = "AuroraCam_"
@@ -29,6 +34,58 @@ CLOUD_PREFIX = "CloudCam_"
 SPACEWEATHER_PREFIX = "SpaceWeather_"
 SNAPSHOT_NAME = "snapshot.jpg"
 THUMB_SUFFIX = ".thumbnail.jpg"
+
+ARCHIVE_SUBDIR = "d"
+DEFAULT_CALENDAR_DAYS = 35
+DATE_DIR_RE = re.compile(r"^\d{8}$")
+
+# "latest" staging links (refreshed every pipeline run): always point at
+# the most recent archived asset regardless of the 7-day weekday rotation.
+AURORA_LATEST_VIDEO = "AuroraCam_latest.mp4"
+AURORA_LATEST_THUMB = "AuroraCam_latest.thumbnail.jpg"
+CLOUD_LATEST_VIDEO = "CloudCam_latest.mp4"
+CLOUD_LATEST_THUMB = "CloudCam_latest.thumbnail.jpg"
+SPACEWEATHER_LATEST = "SpaceWeather_latest.gif"
+LATEST_NAMES = (AURORA_LATEST_VIDEO, AURORA_LATEST_THUMB,
+                CLOUD_LATEST_VIDEO, CLOUD_LATEST_THUMB,
+                SPACEWEATHER_LATEST)
+# Compactly describes the latest-card slots: (video slot, video file,
+# thumb slot or None, thumb file or None, size slots, mtime slot,
+# pending slot, unit). Mirrors the day-card slot_specs asymmetry where
+# "spaceweather" is an image (KB), not a video (MB).
+LATEST_SPECS = (
+    ("aurora_video", AURORA_LATEST_VIDEO, "aurora_thumbnail",
+     AURORA_LATEST_THUMB, ("aurora_size_mb",), "aurora_mtime",
+     "aurora_pending", "mb"),
+    ("cloud_video", CLOUD_LATEST_VIDEO, "cloud_thumbnail",
+     CLOUD_LATEST_THUMB, ("cloud_size_mb",), "cloud_mtime",
+     "cloud_pending", "mb"),
+    ("spaceweather", SPACEWEATHER_LATEST, None, None,
+     ("spaceweather_size_mb", "spaceweather_size_kb"), "spaceweather_mtime",
+     "spaceweather_pending", "kb"),
+)
+DATE_COMPACT_RE = re.compile(r"(20\d{6})")
+
+# Night-window defaults: observer location, mirrors the timelapse
+# generator's night_upload.py (scripts/sun.py convention).
+DEFAULT_LATITUDE = 45.1666
+DEFAULT_LONGITUDE = -90.8076
+DEFAULT_TZ_NAME = "America/Chicago"
+NAUTICAL_ZENITH = 102.0  # 90 + 12 degrees depression
+KP_FILE_FMT = "k-index_%s.json"
+NOAA_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+# Color bands mirror the SWPC planetary K-index chart zones (peak Kp is
+# banded by the same thresholds SWPC uses to color its bars; labels are
+# the NOAA G-scale). Hex colors live in css/aurora.css as .kp-band-<n>.
+KP_BANDS = (
+    {"max_kp": 4.33, "label": "Kp < 5  Quiet", "css": "kp-band-0"},
+    {"max_kp": 5.33, "label": "Kp 5  G1 Minor", "css": "kp-band-1"},
+    {"max_kp": 6.33, "label": "Kp 6  G2 Moderate", "css": "kp-band-2"},
+    {"max_kp": 7.33, "label": "Kp 7  G3 Strong", "css": "kp-band-3"},
+    {"max_kp": 8.67, "label": "Kp 8  G4 Severe", "css": "kp-band-4"},
+    {"max_kp": 9.01, "label": "Kp 9  G5 Extreme", "css": "kp-band-5"},
+)
 
 DEFAULT_CAMERAS = ({"key": "sky", "label": "Sky camera",
                     "image": SNAPSHOT_NAME},)
@@ -153,6 +210,7 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
         "cloud_videos": [],
         "spaceweather": [],
         "days": [],
+        "latest": None,
     }
     if not cam_dir:
         result["error"] = "camera directory not configured"
@@ -195,6 +253,8 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
         for name in sorted(os.listdir(cam_dir)):
             path = os.path.join(cam_dir, name)
             if not os.path.isfile(path):
+                continue
+            if name in LATEST_NAMES:
                 continue
             # a file may vanish (or briefly lock) between isfile and stat;
             # skip it instead of aborting the whole report
@@ -271,6 +331,7 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
                 day[pending_slot] = e["mtime"] < card_ts
     result["days"] = sorted(by_weekday.values(),
                             key=lambda d: d["date_iso"], reverse=True)
+    result["latest"] = _latest_card(cam_dir, now_ts, today_iso)
 
     has_media = bool(result["aurora_videos"] or result["cloud_videos"]
                      or result["spaceweather"])
@@ -292,3 +353,424 @@ def scan_directory(cam_dir, now_ts=None, stale_minutes=30,
 
 def has_snapshot_file(result):
     return result["snapshot"]["exists"]
+
+
+def _latest_date_iso(cam_dir, now_ts):
+    """Anchor date for the latest card: YYYYMMDD found in a latest
+    link's resolved target path, else that file's mtime date."""
+    for _slot, name, *_rest in LATEST_SPECS:
+        path = os.path.join(cam_dir, name)
+        if not os.path.exists(path):
+            continue
+        target = os.path.realpath(path)
+        m = DATE_COMPACT_RE.search(target)
+        if m:
+            c = m.group(1)
+            ts = time.mktime((int(c[:4]), int(c[4:6]), int(c[6:8]),
+                              12, 0, 0, 0, 0, -1))
+            return time.strftime("%Y-%m-%d", time.localtime(ts))
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue
+        return time.strftime("%Y-%m-%d", time.localtime(st.st_mtime))
+    return None
+
+
+def _latest_card(cam_dir, now_ts, today_iso):
+    """Card for the newest available assets, from the *_latest staging
+    links. Same key set as a day card, plus latest=True; None when the
+    pipeline has staged no latest links yet."""
+    card = {
+        "date_iso": None, "day_name": None,
+        "is_today": False, "latest": True,
+        "aurora_video": None, "aurora_thumbnail": None,
+        "aurora_thumbnail_mtime": None, "aurora_size_mb": None,
+        "aurora_mtime": None, "aurora_pending": False,
+        "cloud_video": None, "cloud_thumbnail": None,
+        "cloud_thumbnail_mtime": None, "cloud_size_mb": None,
+        "cloud_mtime": None, "cloud_pending": False,
+        "spaceweather": None, "spaceweather_size_mb": None,
+        "spaceweather_size_kb": None, "spaceweather_mtime": None,
+        "spaceweather_pending": False,
+    }
+    found = False
+    for slot, name, thumb_slot, thumb_name, size_slots, mtime_slot, \
+            pending_slot, unit in LATEST_SPECS:
+        path = os.path.join(cam_dir, name)
+        try:
+            if not os.path.isfile(path):
+                continue
+            st = os.stat(path)
+        except OSError:
+            continue
+        found = True
+        card[slot] = name
+        card[mtime_slot] = int(st.st_mtime)
+        if unit == "mb":
+            card[size_slots[0]] = round(st.st_size / (1024 * 1024), 1)
+        else:
+            card[size_slots[0]] = round(st.st_size / (1024 * 1024), 1)
+            card[size_slots[1]] = int(st.st_size // 1024)
+        if thumb_slot:
+            thumb_path = os.path.join(cam_dir, thumb_name)
+            if os.path.isfile(thumb_path):
+                card[thumb_slot] = thumb_name
+                try:
+                    card[thumb_slot + "_mtime"] = int(os.stat(thumb_path).st_mtime)
+                except OSError:
+                    pass
+        # latest links are refreshed every pipeline run, so an asset is
+        # by definition current: pending never applies
+        card[pending_slot] = False
+    if not found:
+        return None
+    iso = _latest_date_iso(cam_dir, now_ts)
+    if iso is None:
+        iso = today_iso
+    card["date_iso"] = iso
+    try:
+        wday = time.strptime(iso, "%Y-%m-%d").tm_wday
+        card["day_name"] = DAYS[wday]
+    except ValueError:
+        pass
+    card["is_today"] = iso == today_iso
+    return card
+
+
+def _date_compacts(now_ts, count):
+    """count YYYYMMDD strings ending with now_ts's local date, oldest first."""
+    lt = time.localtime(now_ts)
+    out = []
+    for i in range(count - 1, -1, -1):
+        t = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday - i,
+                         12, 0, 0, 0, 0, -1))
+        out.append(time.strftime("%Y%m%d", time.localtime(t)))
+    return out
+
+
+def _iso(date_compact):
+    return "%s-%s-%s" % (date_compact[:4], date_compact[4:6],
+                         date_compact[6:8])
+
+
+def _shift_compact(date_compact, days):
+    """date_compact shifted by whole days (local time, noon anchor)."""
+    lt = time.strptime(date_compact, "%Y%m%d")
+    t = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday + days,
+                     12, 0, 0, 0, 0, -1))
+    return time.strftime("%Y%m%d", time.localtime(t))
+
+
+def _out_cell(date_compact, today_iso):
+    """Date-only placeholder cell outside the history window."""
+    iso = _iso(date_compact)
+    return {
+        "date_iso": iso,
+        "date_compact": date_compact,
+        "day_name": time.strftime("%A", time.strptime(iso, "%Y-%m-%d")),
+        "day_of_month": date_compact[6:8].lstrip("0") or "0",
+        "is_today": iso == today_iso,
+        "in_window": False,
+        "aurora_video": None, "aurora_thumbnail": None,
+        "aurora_mtime": None,
+        "cloud_video": None, "cloud_thumbnail": None, "cloud_mtime": None,
+        "spaceweather": None, "spaceweather_mtime": None,
+        "kp_peak": None, "kp_text": None, "kp_level": None, "kp_css": "",
+    }
+
+
+def _archive_file(sub_dir, name):
+    """(path exists, mtime) for sub_dir/name; missing files yield (False, None)."""
+    path = os.path.join(sub_dir, name)
+    try:
+        return os.path.isfile(path), int(os.stat(path).st_mtime)
+    except OSError:
+        return False, None
+
+
+def _archive_cell(sub_dir, date_compact, today_iso,
+                  latitude, longitude, tz_name):
+    """Calendar cell for one archived date; cam_dir-relative asset paths."""
+    day_dir = os.path.join(sub_dir, date_compact)
+    iso = _iso(date_compact)
+    cell = {
+        "date_iso": iso,
+        "date_compact": date_compact,
+        "day_name": time.strftime("%A", time.strptime(iso, "%Y-%m-%d")),
+        "day_of_month": date_compact[6:8].lstrip("0") or "0",
+        "is_today": iso == today_iso,
+        "in_window": True,
+        "aurora_video": None, "aurora_thumbnail": None,
+        "aurora_mtime": None,
+        "cloud_video": None, "cloud_thumbnail": None, "cloud_mtime": None,
+        "spaceweather": None, "spaceweather_mtime": None,
+        "kp_peak": None, "kp_text": None, "kp_level": None, "kp_css": "",
+    }
+
+    def set_asset(slot, thumb_slot, mtime_slot, name, thumb_name):
+        exists, mtime = _archive_file(day_dir, name)
+        if exists:
+            cell[slot] = "%s/%s/%s" % (ARCHIVE_SUBDIR, date_compact, name)
+            cell[mtime_slot] = mtime
+            if thumb_slot:
+                thumb_exists, _ = _archive_file(day_dir, thumb_name)
+                if thumb_exists:
+                    cell[thumb_slot] = "%s/%s/%s" % (ARCHIVE_SUBDIR,
+                                                     date_compact, thumb_name)
+
+    set_asset("aurora_video", "aurora_thumbnail", "aurora_mtime",
+              "AuroraCam_%s_640x360.mp4" % date_compact,
+              "AuroraCam_%s%s" % (date_compact, THUMB_SUFFIX))
+    set_asset("cloud_video", "cloud_thumbnail", "cloud_mtime",
+              "CloudCam_%s_640x360.mp4" % date_compact,
+              "CloudCam_%s%s" % (date_compact, THUMB_SUFFIX))
+    set_asset("spaceweather", None, "spaceweather_mtime",
+              "SpaceWeather_%s.gif" % date_compact, None)
+
+    day = datetime.strptime(iso, "%Y-%m-%d").date()
+    window = night_window_utc(day, latitude, longitude, tz_name)
+    kp_peak = _kp_peak_for(sub_dir, date_compact, window)
+    if kp_peak is not None:
+        cell["kp_peak"] = kp_peak
+        cell["kp_text"] = "%.1f" % kp_peak
+        level = kp_level(kp_peak)
+        cell["kp_level"] = level
+        band = kp_band(kp_peak)
+        cell["kp_css"] = KP_BANDS[band]["css"] if band is not None else ""
+    return cell
+
+
+def kp_level(kp):
+    """NOAA Kp band (0..9) for a peak Kp value: round-half-up, clamped.
+
+    Band centers are the integers; SWPC colors 4.67 ("5-") and 5.33
+    ("5+") with the Kp-5 band, so round-half-up reproduces the official
+    10-color scale. Returns None for non-numeric input.
+    """
+    try:
+        kp = float(kp)
+    except (TypeError, ValueError):
+        return None
+    return max(0, min(9, int(math.floor(kp + 0.5))))
+
+
+def kp_band(kp):
+    """SWPC color-band index (0..5) for a peak Kp value; None if not numeric.
+
+    Thresholds match the zones on SWPC's planetary K-index chart:
+    <=4.33 green, <=5.33 yellow, <=6.33 light orange, <=7.33 orange,
+    <=8.67 red, else dark red.
+    """
+    try:
+        kp = float(kp)
+    except (TypeError, ValueError):
+        return None
+    for idx, band in enumerate(KP_BANDS):
+        if kp <= band["max_kp"]:
+            return idx
+    return len(KP_BANDS) - 1
+
+
+def _julian_century(year, month, day):
+    y, m = year, month
+    if m <= 2:
+        y -= 1
+        m += 12
+    a = y // 100
+    b = 2 - a + a // 4
+    jd = int(365.25 * (y + 4716)) + int(30.6001 * (m + 1)) + day + b - 1524.5
+    return (jd - 2451545.0) / 36525.0
+
+
+def _sun_declination_and_equation_of_time(year, month, day):
+    """NOAA solar calculator: (declination degrees, equation-of-time minutes)."""
+    t = _julian_century(year, month, day)
+    l0 = (280.46646 + t * (36000.76983 + t * 0.0003032)) % 360.0
+    m = 357.52911 + t * (35999.05029 - 0.0001537 * t)
+    e = 0.016708634 - t * (0.000042037 + 0.0000001267 * t)
+    c = (math.sin(math.radians(m)) * (1.914602 - t * (0.004817 + 0.000014 * t))
+         + math.sin(math.radians(2 * m)) * (0.019993 - 0.000101 * t)
+         + math.sin(math.radians(3 * m)) * 0.000289)
+    true_long = l0 + c
+    app_long = (true_long - 0.00569
+                - 0.00478 * math.sin(math.radians(125.04 - 1934.136 * t)))
+    mean_obliq = 23.0 + (26.0 + (21.448 - t * (46.815 + t * (0.00059
+                          - t * 0.001813))) / 60.0) / 60.0
+    obliq = mean_obliq + 0.00256 * math.cos(math.radians(125.04 - 1934.136 * t))
+    decl = math.degrees(math.asin(math.sin(math.radians(obliq))
+                                  * math.sin(math.radians(app_long))))
+    var_y = math.tan(math.radians(obliq / 2.0)) ** 2
+    eot = 4.0 * math.degrees(
+        var_y * math.sin(2 * math.radians(l0))
+        - 2 * e * math.sin(math.radians(m))
+        + 4 * e * var_y * math.sin(math.radians(m)) * math.cos(2 * math.radians(l0))
+        - 0.5 * var_y * var_y * math.sin(4 * math.radians(l0))
+        - 1.25 * e * e * math.sin(2 * math.radians(m)))
+    return decl, eot
+
+
+def _tz_minutes_east(tz, year, month, day):
+    """Local-UTC offset minutes for noon on the date, honoring DST."""
+    if tz is not None:
+        naive = datetime(year, month, day, 12)
+        offset = naive.replace(tzinfo=tz).utcoffset()
+        if offset is not None:
+            return int(offset.total_seconds() // 60)
+    lt = time.mktime((year, month, day, 12, 0, 0, 0, 0, -1))
+    return int(time.localtime(lt).tm_gmtoff or 0) // 60
+
+
+def _local_to_epoch(tz, year, month, day, minutes):
+    naive = datetime(year, month, day) + timedelta(minutes=minutes)
+    if tz is not None:
+        return naive.replace(tzinfo=tz).timestamp()
+    return time.mktime((naive.year, naive.month, naive.day,
+                        naive.hour, naive.minute, naive.second, 0, 0, -1))
+
+
+def night_window_utc(day, latitude=DEFAULT_LATITUDE,
+                     longitude=DEFAULT_LONGITUDE,
+                     tz_name=DEFAULT_TZ_NAME):
+    """Nautical dusk on day-1 through nautical dawn on day, UTC epochs.
+
+    Mirrors the timelapse generator's night_upload.night_window (astral,
+    Depression.NAUTICAL); computed with the NOAA solar equations to keep
+    the scanner stdlib-only. Falls back to the system zone when tz_name
+    is unknown. Returns (start_epoch, end_epoch).
+    """
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = None
+    y, m, d = day.year, day.month, day.day
+    prev = day - timedelta(days=1)
+
+    def twilight(year, month, day_, evening):
+        decl, eot = _sun_declination_and_equation_of_time(year, month, day_)
+        # per-date UTC offset: dusk and dawn can straddle a DST change
+        tz_off = _tz_minutes_east(tz, year, month, day_)
+        noon = 720.0 - 4.0 * longitude - eot + tz_off
+        cos_h = ((math.cos(math.radians(NAUTICAL_ZENITH))
+                  - math.sin(math.radians(latitude)) * math.sin(math.radians(decl)))
+                 / (math.cos(math.radians(latitude)) * math.cos(math.radians(decl))))
+        cos_h = max(-1.0, min(1.0, cos_h))  # polar day/night degenerate case
+        ha = 4.0 * math.degrees(math.acos(cos_h))
+        return _local_to_epoch(tz, year, month, day_,
+                               noon + ha if evening else noon - ha)
+
+    start = twilight(prev.year, prev.month, prev.day, evening=True)
+    end = twilight(y, m, d, evening=False)
+    return start, end
+
+
+def _load_kp_samples(path):
+    """Leniently parse a k-index_<date>.json file into (utc_epoch, kp).
+
+    Malformed files and rows are skipped: a calendar cell must render
+    even when NOAA's product format hiccups. Never raises.
+    """
+    try:
+        with open(path, "r") as f:
+            rows = json.load(f)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(rows, list):
+        return []
+    out = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            when = datetime.strptime(str(row["time_tag"]),
+                                     NOAA_TIME_FORMAT).replace(
+                tzinfo=timezone.utc)
+            out.append((when.timestamp(), float(row["Kp"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def _kp_peak_for(sub_dir, date_compact, window):
+    """Peak Kp in window from k-index_<date>.json in this date's dir
+    unioned with the previous day's file (in its own dir): early-UTC dusk
+    windows reach into the prior day's product."""
+    try:
+        prev = (datetime.strptime(date_compact, "%Y%m%d")
+                - timedelta(days=1)).strftime("%Y%m%d")
+    except ValueError:
+        prev = None
+    samples = []
+    if prev:
+        samples.extend(_load_kp_samples(os.path.join(sub_dir, prev,
+                                                     KP_FILE_FMT % prev)))
+    samples.extend(_load_kp_samples(os.path.join(
+        sub_dir, date_compact, KP_FILE_FMT % date_compact)))
+    start, end = window
+    inside = [kp for when, kp in samples if start <= when <= end]
+    return max(inside) if inside else None
+
+
+def scan_archive(cam_dir, now_ts=None, calendar_days=DEFAULT_CALENDAR_DAYS,
+                 latitude=DEFAULT_LATITUDE, longitude=DEFAULT_LONGITUDE,
+                 tz_name=DEFAULT_TZ_NAME):
+    """Scan the staged date-dir tree (d/<YYYYMMDD>/) for the calendar view.
+
+    Returns a dict with the same conventions as scan_directory(): plain
+    data, cam_dir-relative URLs, never raises. "weeks" is a list of
+    whole 7-cell Mon-Sun rows spanning full weeks around calendar_days
+    ending with the local date of now_ts; cells outside the history
+    window carry in_window=False and date fields only.
+    """
+    now_ts = time.time() if now_ts is None else now_ts
+    try:
+        calendar_days = max(1, int(calendar_days))
+    except (TypeError, ValueError):
+        calendar_days = DEFAULT_CALENDAR_DAYS
+    result = {
+        "enabled": True,
+        "cam_dir": str(cam_dir) if cam_dir else "",
+        "calendar_days": calendar_days,
+        "weeks": [],
+        "kp_scale": [{"label": b["label"], "css": b["css"]}
+                     for b in KP_BANDS],
+    }
+    if not cam_dir:
+        result["error"] = "archive directory not configured"
+        return result
+    try:
+        sub_dir = os.path.join(cam_dir, ARCHIVE_SUBDIR)
+        if not os.path.isdir(sub_dir):
+            result["error"] = "archive tree not staged: %s" % sub_dir
+            return result
+        date_compacts = _date_compacts(now_ts, calendar_days)
+        today_iso = _iso(date_compacts[-1])
+        cells = [_archive_cell(sub_dir, date_compact, today_iso,
+                               latitude, longitude, tz_name)
+                 for date_compact in date_compacts]
+        # Alternating shade per calendar month (newest month = even).
+        # Whole Mon-Sun weeks: real placeholder cells outside the history
+        # window (before its start, after today) keep every row full.
+        first_wday = time.strptime(cells[0]["date_iso"], "%Y-%m-%d").tm_wday
+        today_wday = time.strptime(today_iso, "%Y-%m-%d").tm_wday
+        grid = [_out_cell(_shift_compact(date_compacts[0], -back), today_iso)
+                for back in range(first_wday, 0, -1)]
+        grid.extend(cells)
+        grid.extend(_out_cell(_shift_compact(date_compacts[-1], fwd),
+                              today_iso)
+                    for fwd in range(1, 7 - today_wday))
+        months = []
+        for cell in grid:
+            key = cell["date_iso"][:7]
+            if key not in months:
+                months.append(key)
+        for cell in grid:
+            parity = (len(months) - 1 - months.index(cell["date_iso"][:7])) % 2
+            cell["month_class"] = ("tl-month-even" if parity == 0
+                                   else "tl-month-odd")
+    except OSError as e:
+        result["error"] = str(e)
+        return result
+
+    result["weeks"] = [grid[i:i + 7] for i in range(0, len(grid), 7)]
+    return result

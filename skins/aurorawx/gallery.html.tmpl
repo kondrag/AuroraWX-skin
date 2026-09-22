@@ -35,26 +35,14 @@
       </div>
     </div>
   #else
-    #if $aurora.days
+    #if $aurora.latest or $aurora.days
+    #set $day = $aurora.latest if $aurora.latest else $aurora.days[0]
     <div class="row my-4">
-      <div class="col-12">
-        <h3 class="h5-responsive $Extras.color-text">$Extras.Translations[$Extras.language].gallery
-          <small class="text-muted ml-2">last $len($aurora.days) days</small></h3>
-      </div>
-    </div>
-    #end if
-
-    #for $day in $aurora.days
-    <div class="row my-3">
       <div class="col-12">
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">$day.day_name
-              <small class="text-muted ml-2">$day.date_iso
-                #if $day.is_today
-                <span class="badge badge-info ml-1">today</span>
-                #end if
-              </small>
+            <h5 class="card-title">Latest
+              <small class="text-muted ml-2">$day.date_iso</small>
             </h5>
             <div class="row">
               <div class="col-md-4 mb-3">
@@ -139,9 +127,75 @@
         </div>
       </div>
     </div>
-    #end for
+    #end if
 
-    #if not $aurora.days
+    <div class="row my-4">
+      <div class="col-12">
+        <h3 class="h5-responsive $Extras.color-text">Nightly archive
+          <small class="text-muted ml-2">last $aurora.calendar.calendar_days days</small></h3>
+        #if not $aurora.calendar.enabled or $aurora.calendar.error
+        <div class="card">
+          <div class="card-body text-center py-5 text-muted">
+            Archive calendar not available.
+          </div>
+        </div>
+        #else
+        <div class="tl-legend">
+          #for $band in $aurora.calendar.kp_scale
+          <span class="tl-legend-item"><span
+              class="tl-swatch $band.css"></span>$band.label</span>
+          #end for
+        </div>
+        <div class="tl-calendar">
+          #for $wd in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          <div class="tl-weekday">$wd</div>
+          #end for
+          #for $week in $aurora.calendar.weeks
+          #for $cell in $week
+          #if not $cell
+          <div class="tl-cell tl-cell-empty"></div>
+          #else
+          #if not $cell.in_window
+          ## Placeholder day outside the archive window (before it starts
+          ## or after today): date-only box, shaded very dark grey.
+          <div class="tl-cell tl-cell-out $cell.month_class"><span
+              class="tl-date">$cell.day_of_month</span></div>
+          #else
+          #if $cell.aurora_video
+          <button type="button"
+                  class="tl-cell aurora-modal-trigger $cell.month_class ${'tl-cell-today' if $cell.is_today else ''}"
+                  data-type="video"
+                  data-src="$cell.aurora_video?v=$cell.aurora_mtime"
+                  data-title="Night timelapse — $cell.day_name, $cell.date_iso">
+          #else
+          <div class="tl-cell $cell.month_class ${'tl-cell-today' if $cell.is_today else ''}">
+          #end if
+            <span class="tl-date">$cell.day_of_month</span>
+            #if $cell.aurora_thumbnail
+            <img class="tl-cell-img"
+                 src="$cell.aurora_thumbnail?v=$cell.aurora_mtime"
+                 alt="Night timelapse for $cell.date_iso" loading="lazy">
+            #end if
+            #if $cell.kp_text
+            <span class="tl-kp $cell.kp_css">Kp $cell.kp_text</span>
+            #else
+            <span class="tl-kp-none">&#8211;</span>
+            #end if
+          #if $cell.aurora_video
+          </button>
+          #else
+          </div>
+          #end if
+          #end if
+          #end if
+          #end for
+          #end for
+        </div>
+        #end if
+      </div>
+    </div>
+
+    #if not $aurora.days and (not $aurora.calendar.enabled or $aurora.calendar.error)
     <div class="row my-4">
       <div class="col-12">
         <div class="card">

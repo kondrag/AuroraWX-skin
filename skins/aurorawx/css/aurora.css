@@ -267,3 +267,185 @@ body.aurora-modal-open {
     display: flex !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Timelapse archive calendar (Timelapses page)
+ *
+ * 7-week Mon-aligned grid. Each cell shows the day-of-month and, when Kp
+ * data exists, a badge colored with the SWPC planetary K-index chart
+ * palette (.kp-band-*). Cells with a night timelapse are modal triggers.
+ * ------------------------------------------------------------------------- */
+.tl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.tl-legend-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tl-swatch {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 0.2rem;
+  margin-right: 0.35rem;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.tl-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.4rem;
+}
+
+.tl-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9e9e9e;
+  padding-bottom: 0.15rem;
+}
+
+/* Calendar cells and legend sit outside .card, where the theme's
+ * dark/light text overrides don't reach — give them theme-adaptive
+ * colors (mirrors style.css's .dark-theme/.auto-theme conventions). */
+.tl-date,
+.tl-legend-item {
+  color: #212121;
+}
+
+.dark-theme .tl-date,
+.dark-theme .tl-legend-item {
+  color: #ddd !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auto-theme .tl-date,
+  .auto-theme .tl-legend-item {
+    color: #ddd !important;
+  }
+}
+
+.tl-cell {
+  position: relative;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 0.35rem;
+  min-height: 4.2rem;
+  padding: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: default;
+}
+
+.tl-cell-empty {
+  border-style: dashed;
+  opacity: 0.35;
+}
+
+/* Alternate months get slightly different gray washes; both stay a
+ * touch off the page background in light and dark themes. */
+.tl-month-even {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.tl-month-odd {
+  background: rgba(128, 128, 128, 0.16);
+}
+
+/* Placeholder days outside the archive window (before it starts or
+ * after today): date-only boxes in very dark grey. Declared after the
+ * month washes so the dark background wins. */
+.tl-cell-out {
+  background: #1b1b1b;
+}
+
+.tl-cell-out .tl-date {
+  color: #8f8f8f;
+}
+
+button.tl-cell {
+  cursor: pointer;
+  color: inherit;
+  text-align: center;
+  font: inherit;
+}
+
+button.tl-cell:hover,
+button.tl-cell:focus {
+  border-color: #4fc3f7;
+  outline: none;
+}
+
+.tl-cell-today {
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 1px #4fc3f7;
+}
+
+.tl-date {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.tl-cell-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.tl-kp {
+  margin-top: 0.25rem;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  color: #212121;
+}
+
+.tl-kp-none {
+  color: #9e9e9e;
+  font-weight: 400;
+  font-size: 0.72rem;
+}
+
+/* SWPC planetary K-index chart palette (services.swpc.noaa.gov) */
+.kp-band-0 { background: #92d050; }
+.kp-band-1 { background: #f6eb14; }
+.kp-band-2 { background: #ffc800; }
+.kp-band-3 { background: #ff9600; }
+.kp-band-4 { background: #ff0000; color: #fff; }
+.kp-band-5 { background: #c80000; color: #fff; }
+
+@media (max-width: 576px) {
+  .tl-calendar {
+    gap: 0.2rem;
+  }
+
+  .tl-cell {
+    min-height: 3.2rem;
+    padding: 0.15rem;
+  }
+
+  .tl-date {
+    font-size: 0.7rem;
+  }
+
+  .tl-kp {
+    font-size: 0.62rem;
+    padding: 0.12rem 0.25rem;
+  }
+}

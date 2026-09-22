@@ -54,7 +54,28 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
         self.cameras = self._read_cameras(cfg)
         self.clearsky_chart = str(cfg.get("clearsky_chart_filename",
                                           "clearsky_chart.gif") or "")
+        self.calendar_days = self._read_int(
+            cfg, "calendar_days", scanner.DEFAULT_CALENDAR_DAYS)
+        self.latitude = self._read_float(
+            cfg, "latitude", scanner.DEFAULT_LATITUDE)
+        self.longitude = self._read_float(
+            cfg, "longitude", scanner.DEFAULT_LONGITUDE)
+        self.tz_name = str(cfg.get("tz_name", scanner.DEFAULT_TZ_NAME) or "")
         self.asset_version = self._compute_asset_version()
+
+    @staticmethod
+    def _read_int(cfg, key, default):
+        try:
+            return int(float(cfg.get(key, default)))
+        except (ValueError, TypeError, OverflowError):
+            return default
+
+    @staticmethod
+    def _read_float(cfg, key, default):
+        try:
+            return float(cfg.get(key, default))
+        except (ValueError, TypeError, OverflowError):
+            return default
 
     @staticmethod
     def _read_cameras(cfg):
@@ -117,6 +138,9 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
                          "age_minutes": None, "is_stale": True},
             "aurora_videos": [], "cloud_videos": [], "spaceweather": [],
             "days": [], "cameras": [],
+            "calendar": {"enabled": False, "cam_dir": self.cam_dir,
+                         "calendar_days": self.calendar_days,
+                         "weeks": [], "kp_scale": [], "error": None},
             "format_ts": format_ts,
             "clearsky_chart": {"exists": False, "url": None, "mtime": None,
                                "age_minutes": None, "is_stale": True},
@@ -132,6 +156,13 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
                     clearsky_chart=self.clearsky_chart)
                 data.update(scanned)
                 data["enabled"] = True
+                data["calendar"] = scanner.scan_archive(
+                    self.cam_dir,
+                    calendar_days=self.calendar_days,
+                    latitude=self.latitude,
+                    longitude=self.longitude,
+                    tz_name=self.tz_name)
+                data["calendar"].setdefault("error", None)
             except Exception as e:  # belt and braces: never break a report run
                 data.update({"enabled": True, "status": scanner.NO_DATA,
                              "error": repr(e)})
@@ -151,4 +182,17 @@ class AuroraSearchList(weewx.cheetahgenerator.SearchList):
                 for key in ("aurora_video", "cloud_video", "spaceweather",
                             "aurora_thumbnail", "cloud_thumbnail"):
                     day[key] = self._abs_url(day[key])
+            if data.get("latest"):
+                for key in ("aurora_video", "aurora_thumbnail",
+                            "cloud_video", "cloud_thumbnail",
+                            "spaceweather"):
+                    data["latest"][key] = self._abs_url(data["latest"][key])
+            for week in data["calendar"].get("weeks") or []:
+                for cell in week:
+                    if not cell:
+                        continue
+                    for key in ("aurora_video", "aurora_thumbnail",
+                                "cloud_video", "cloud_thumbnail",
+                                "spaceweather"):
+                        cell[key] = self._abs_url(cell[key])
         return [{"aurora": data}]

@@ -130,7 +130,7 @@
 
     <div class="d-flex justify-content-between align-items-center mt-4">
       <h2 class="$Extras.color-text mb-0">$Extras.Translations[$Extras.language].title_week: $week.dateTime.format("%b %d, %Y") to $current.dateTime.format("%b %d, %Y")</h2>
-      <select class="form-control w-auto" data-periods="weeks" data-prefix="week-" data-parse="YYYY-MM-DD" data-fmt="MMM DD, YYYY" onchange="if (this.value) window.location.href = this.value">
+      <select class="form-control w-auto" data-periods="weeks" data-prefix="week/week-" data-parse="YYYY-MM-DD" data-fmt="MMM DD, YYYY" onchange="if (this.value) window.location.href = this.value">
         <option value="" selected disabled>$Extras.Translations[$Extras.language].select_period</option>
       </select>
       <script src="periods.js"></script>

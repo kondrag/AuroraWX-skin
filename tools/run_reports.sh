@@ -74,6 +74,15 @@ done
 check "$OUT/css/aurora.css" 'aurora-status-card .card-body'
 check "$OUT/index.html" 'aurora-status-card'
 check "$OUT/gallery.html" 'aurora-modal-trigger'
+check "$OUT/gallery.html" 'Nightly archive'
+check "$OUT/gallery.html" 'tl-calendar'
+check "$OUT/gallery.html" 'tl-legend'
+check "$OUT/gallery.html" 'Kp 6.3'
+check "$OUT/gallery.html" 'kp-band-2'
+check "$OUT/gallery.html" 'tl-month-even'
+check "$OUT/gallery.html" 'tl-month-odd'
+check "$OUT/gallery.html" 'card-title">Latest'
+check_not "$OUT/gallery.html" '>today<'
 check "$OUT/solar.html" 'regions-tbody'
 check "$OUT/solar.html" 'kp-forecast-chart'
 check "$OUT/solar.html" 'card h-100 text-center'
@@ -87,7 +96,7 @@ check "$OUT/archive.html" 'dropdown-toggle active'
 check "$OUT/yesterday.html" 'Select a period'
 check "$OUT/week.html" 'Select a period'
 check "$OUT/month.html" 'Select a period'
-check "$OUT/day-$(date +%F).html" 'Select a period'
+check "$OUT/day/day-$(date +%F).html" 'Select a period'
 check "$OUT/periods.js" '"days"'
 check "$OUT/periods.js" '"weeks"'
 check "$OUT/periods.js" '"months"'
@@ -101,18 +110,21 @@ for p in yesterday week month; do
   check "$OUT/$p.html" 'd-flex justify-content-between align-items-center'
   check_not "$OUT/$p.html" '<option value="day-'
 done
-check "$OUT/day-$(date +%F).html" 'data-periods="days"'
-check "$OUT/day-$(date +%F).html" 'src="periods.js"'
-check "$OUT/day-$(date +%F).html" 'd-flex justify-content-between align-items-center'
-check_not "$OUT/day-$(date +%F).html" '<option value="day-'
+check "$OUT/day/day-$(date +%F).html" 'data-periods="days"'
+check "$OUT/day/day-$(date +%F).html" 'src="periods.js"'
+check "$OUT/day/day-$(date +%F).html" 'd-flex justify-content-between align-items-center'
+check_not "$OUT/day/day-$(date +%F).html" '<option value="day-'
 # current week archive page: Monday-start range title (requires week_start = 0
 # in every scenario conf; a Sunday week_start shifts the binder one day back)
 read -r WEEKFILE WEEKTITLE <<EOF
 $(.venv/bin/python -c "import datetime; t=datetime.date.today(); m=t-datetime.timedelta(days=t.weekday()); e=m+datetime.timedelta(days=6); print('week-'+m.strftime('%Y-%m-%d')+'.html', m.strftime('%b %d, %Y')+' '+chr(0x2013)+' '+e.strftime('%b %d, %Y'))")
 EOF
-check "$OUT/$WEEKFILE" "$WEEKTITLE"
-ls "$OUT"/week-*.html >/dev/null || { echo "FAIL: no week-*.html generated"; exit 1; }
-echo "ok: week-*.html files generated"
+check "$OUT/week/$WEEKFILE" "$WEEKTITLE"
+check "$OUT/year/year-$(date +%Y).html" "$(date +%Y)"
+ls "$OUT"/week/week-*.html >/dev/null || { echo "FAIL: no week/week-*.html generated"; exit 1; }
+echo "ok: week/week-*.html files generated"
+ls "$OUT"/day/day-*.html >/dev/null || { echo "FAIL: no day/day-*.html generated"; exit 1; }
+echo "ok: day/day-*.html files generated"
 
 run_scenario partial
 check "$OUT/aurora.html" 'stale data'
@@ -120,6 +132,7 @@ check_not "$OUT/aurora.html" 'clearsky_chart.gif'
 check_not "$OUT/aurora.html" '>Clear Sky Chart<'
 check_not "$OUT/aurora.html" 'clearsky_chart.gif'
 check "$OUT/gallery.html" 'Still encoding'
+check "$OUT/gallery.html" 'Archive calendar not available'
 
 run_scenario empty
 check "$OUT/gallery.html" 'No timelapses found yet'
