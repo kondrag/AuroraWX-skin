@@ -85,6 +85,24 @@
     return QUIET;
   }
 
+  /* Solar-page Kp tiles get a card accent in the same threshold colors
+     the Kp charts use. Class-based so the palette lives in CSS. */
+  function kpAccentClass(kp) {
+    if (kp >= 5) return 'kp-accent-storm';
+    if (kp >= 4) return 'kp-accent-elevated';
+    if (kp >= 3) return 'kp-accent-moderate';
+    return 'kp-accent-quiet';
+  }
+
+  function setKpAccent(id, kp) {
+    var card = document.getElementById(id);
+    if (!card) return;
+    card.classList.remove('kp-accent-quiet', 'kp-accent-moderate',
+                          'kp-accent-elevated', 'kp-accent-storm');
+    if (kp === null || kp === undefined || !isFinite(kp)) return;
+    card.classList.add(kpAccentClass(kp));
+  }
+
   function renderStatus(kpSeries, bz, wind) {
     var kp = kpSeries.length ? kpSeries[kpSeries.length - 1].kp : null;
     var b = badgeFor(kp === null ? -1 : kp, bz === null ? 0 : bz);
@@ -93,9 +111,12 @@
     setText('wind-now', wind === null ? '\u2014' : String(Math.round(wind)));
     var cutoff = Date.now() - 24 * 3600 * 1000;
     var recent = kpSeries.filter(function (p) { return p.t >= cutoff; });
-    setText('kp-peak', recent.length
-      ? String(Math.max.apply(null, recent.map(function (p) { return p.kp; })))
-      : '\u2014');
+    var peak = recent.length
+      ? Math.max.apply(null, recent.map(function (p) { return p.kp; }))
+      : null;
+    setText('kp-peak', peak === null ? '\u2014' : String(peak));
+    setKpAccent('kp-now-card', kp);
+    setKpAccent('kp-peak-card', peak);
     var badge = document.getElementById('aurora-badge');
     if (badge && kp !== null) {
       badge.textContent = b.text;

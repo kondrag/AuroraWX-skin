@@ -52,24 +52,6 @@
   background-color: rgba(0, 0, 0, .35);
 }
 
-/* More breathing room on the left so the Kp value is not flush
-   against the card border */
-.aurora-status-card .card-body {
-  padding-left: 2.25rem;
-}
-
-.aurora-status-card .display-4 {
-  line-height: 1;
-}
-
-/* on ultra-wide screens .d-flex-xxl becomes a 50/50 two-column flex row;
-   keep the aurora status card on its own full-width band above it */
-@media (min-width: 1660px) {
-  .aurora-status-row {
-    flex: 0 0 100%;
-  }
-}
-
 /* gallery day cards: thumbnail frames with a play affordance */
 .aurora-media-title {
   white-space: nowrap;
@@ -169,7 +151,7 @@ body.aurora-modal-open {
   overflow: hidden;
 }
 
-/* NOAA-style R/S/G scale chips (Solar Activity card, Current page) */
+/* NOAA-style R/S/G scale chips (Impacts card, Solar page) */
 .aurora-rsg {
   display: inline-grid;
   /* Transposed: rows are impact names (single line, auto-sized to the
@@ -239,7 +221,7 @@ body.aurora-modal-open {
  * NeoWX Material ships a >= 1660px two-pane experiment: .d-flex-xxl turns
  * the page wrapper into a flex row and .temprow/.graphrow each take 50%.
  * That only fits the stock Current page's exact two-row structure; on every
- * other page (Viewing, Timelapses, Solar, week/month/year/...) the stacked
+ * other page (Viewing, Gallery, Solar, week/month/year/...) the stacked
  * rows end up side by side as shrink-to-fit columns. Disable the experiment
  * and cap the content width on very wide screens instead. Scope: only the
  * d-flex-xxl wrappers (almanac/archive/telemetry use plain .container and
@@ -269,7 +251,7 @@ body.aurora-modal-open {
 }
 
 /* ---------------------------------------------------------------------------
- * Timelapse archive calendar (Timelapses page)
+ * Timelapse archive calendar (Gallery page)
  *
  * 7-week Mon-aligned grid. Each cell shows the day-of-month and, when Kp
  * data exists, a badge colored with the SWPC planetary K-index chart
@@ -429,6 +411,15 @@ button.tl-cell:focus {
 .kp-band-3 { background: #ff9600; }
 .kp-band-4 { background: #ff0000; color: #fff; }
 .kp-band-5 { background: #c80000; color: #fff; }
+
+/* Solar-page Kp tile accents. Colors match the Kp chart bars driven by
+   kpThresholdColor() in js/modules/aurora.js; the JS swaps the modifier
+   class as the value crosses each threshold. */
+.kp-accent { border-top: 3px solid transparent; }
+.kp-accent-quiet { border-top-color: #43a047; }
+.kp-accent-moderate { border-top-color: #fdd835; }
+.kp-accent-elevated { border-top-color: #fb8c00; }
+.kp-accent-storm { border-top-color: #e53935; }
 
 @media (max-width: 576px) {
   .tl-calendar {

@@ -438,17 +438,6 @@ def _latest_card(cam_dir, now_ts, today_iso):
     return card
 
 
-def _date_compacts(now_ts, count):
-    """count YYYYMMDD strings ending with now_ts's local date, oldest first."""
-    lt = time.localtime(now_ts)
-    out = []
-    for i in range(count - 1, -1, -1):
-        t = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday - i,
-                         12, 0, 0, 0, 0, -1))
-        out.append(time.strftime("%Y%m%d", time.localtime(t)))
-    return out
-
-
 def _iso(date_compact):
     return "%s-%s-%s" % (date_compact[:4], date_compact[4:6],
                          date_compact[6:8])
@@ -711,16 +700,33 @@ def _kp_peak_for(sub_dir, date_compact, window):
     return max(inside) if inside else None
 
 
+def _pretty_range(start_compact, end_compact):
+    """Human label like "Aug 24 – Sep 21, 2026" (en dash; the year is
+    shown on the end date, and on the start date too when they differ)."""
+    s = time.strptime(start_compact, "%Y%m%d")
+    e = time.strptime(end_compact, "%Y%m%d")
+
+    def part(st, with_year):
+        txt = "%s %d" % (time.strftime("%b", st), st.tm_mday)
+        return "%s, %d" % (txt, st.tm_year) if with_year else txt
+
+    return "%s – %s" % (part(s, s.tm_year != e.tm_year), part(e, True))
+
+
 def scan_archive(cam_dir, now_ts=None, calendar_days=DEFAULT_CALENDAR_DAYS,
                  latitude=DEFAULT_LATITUDE, longitude=DEFAULT_LONGITUDE,
                  tz_name=DEFAULT_TZ_NAME):
     """Scan the staged date-dir tree (d/<YYYYMMDD>/) for the calendar view.
 
     Returns a dict with the same conventions as scan_directory(): plain
-    data, cam_dir-relative URLs, never raises. "weeks" is a list of
-    whole 7-cell Mon-Sun rows spanning full weeks around calendar_days
-    ending with the local date of now_ts; cells outside the history
-    window carry in_window=False and date fields only.
+    data, cam_dir-relative URLs, never raises. The grid is a fixed set of
+    whole Mon-Sun weeks -- ceil(calendar_days / 7) rows ending with the
+    Sunday of now_ts's week -- so its size never drifts with weekday
+    alignment. Cells after today are placeholders (in_window=False, date
+    fields only); every cell up to today can carry data, so the number of
+    data days shown is calendar_days minus the forward padding (the
+    configured maximum only when today is a Sunday). "range_start_iso",
+    "range_end_iso" and "range_pretty" describe that data window.
     """
     now_ts = time.time() if now_ts is None else now_ts
     try:
@@ -732,6 +738,8 @@ def scan_archive(cam_dir, now_ts=None, calendar_days=DEFAULT_CALENDAR_DAYS,
         "cam_dir": str(cam_dir) if cam_dir else "",
         "calendar_days": calendar_days,
         "weeks": [],
+        "range_start_iso": None, "range_end_iso": None,
+        "range_pretty": None,
         "kp_scale": [{"label": b["label"], "css": b["css"]}
                      for b in KP_BANDS],
     }
@@ -743,22 +751,23 @@ def scan_archive(cam_dir, now_ts=None, calendar_days=DEFAULT_CALENDAR_DAYS,
         if not os.path.isdir(sub_dir):
             result["error"] = "archive tree not staged: %s" % sub_dir
             return result
-        date_compacts = _date_compacts(now_ts, calendar_days)
-        today_iso = _iso(date_compacts[-1])
-        cells = [_archive_cell(sub_dir, date_compact, today_iso,
-                               latitude, longitude, tz_name)
-                 for date_compact in date_compacts]
+        lt = time.localtime(now_ts)
+        today_compact = time.strftime("%Y%m%d", lt)
+        today_iso = _iso(today_compact)
+        # Whole weeks ending with the current week's Sunday; the start
+        # therefore always lands on a Monday (no backward padding).
+        sunday_offset = 6 - lt.tm_wday
+        total_days = -(-calendar_days // 7) * 7   # ceil to whole weeks
+        grid = []
+        for offset in range(sunday_offset - (total_days - 1),
+                            sunday_offset + 1):
+            date_compact = _shift_compact(today_compact, offset)
+            if _iso(date_compact) <= today_iso:
+                grid.append(_archive_cell(sub_dir, date_compact, today_iso,
+                                          latitude, longitude, tz_name))
+            else:
+                grid.append(_out_cell(date_compact, today_iso))
         # Alternating shade per calendar month (newest month = even).
-        # Whole Mon-Sun weeks: real placeholder cells outside the history
-        # window (before its start, after today) keep every row full.
-        first_wday = time.strptime(cells[0]["date_iso"], "%Y-%m-%d").tm_wday
-        today_wday = time.strptime(today_iso, "%Y-%m-%d").tm_wday
-        grid = [_out_cell(_shift_compact(date_compacts[0], -back), today_iso)
-                for back in range(first_wday, 0, -1)]
-        grid.extend(cells)
-        grid.extend(_out_cell(_shift_compact(date_compacts[-1], fwd),
-                              today_iso)
-                    for fwd in range(1, 7 - today_wday))
         months = []
         for cell in grid:
             key = cell["date_iso"][:7]
@@ -768,6 +777,10 @@ def scan_archive(cam_dir, now_ts=None, calendar_days=DEFAULT_CALENDAR_DAYS,
             parity = (len(months) - 1 - months.index(cell["date_iso"][:7])) % 2
             cell["month_class"] = ("tl-month-even" if parity == 0
                                    else "tl-month-odd")
+        result["range_start_iso"] = _iso(grid[0]["date_compact"])
+        result["range_end_iso"] = today_iso
+        result["range_pretty"] = _pretty_range(grid[0]["date_compact"],
+                                               today_compact)
     except OSError as e:
         result["error"] = str(e)
         return result

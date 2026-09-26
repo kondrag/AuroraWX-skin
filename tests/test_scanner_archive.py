@@ -90,36 +90,71 @@ def test_calendar_covers_35_days_mon_aligned(tmp_path):
 
 def test_grid_full_weeks_with_out_of_window_cells(tmp_path):
     now_mon = NOW + 86400  # 2026-09-21, a Monday
-    dates = date_compacts(now_mon, 35)  # 2026-08-18 .. 2026-09-21
-    seed_date_dir(tmp_path, dates[-1])
+    seed_date_dir(tmp_path, "20260921")
     r = scanner.scan_archive(tmp_path, now_ts=now_mon)
     weeks = r["weeks"]
-    # 35 days ending on a Monday span six whole Mon-Sun weeks
-    assert len(weeks) == 6
+    # grid = whole Mon-Sun weeks ending with the current week's Sunday
+    assert len(weeks) == 5
     for week in weeks:
         assert len(week) == 7
         assert all(c is not None for c in week)
     cells = [c for week in weeks for c in week]
-    assert len(cells) == 42
-    # leading placeholder: the Monday before the window starts
-    assert cells[0]["date_iso"] == "2026-08-17"
-    assert cells[0]["in_window"] is False
-    assert cells[0]["day_of_month"] == "17"
+    assert len(cells) == 35
+    # grid starts on Monday of the week 34 days before the coming Sunday
+    assert cells[0]["date_iso"] == "2026-08-24"
+    # no backward padding: the first cell is inside the window
+    assert cells[0]["in_window"] is True
+    assert cells[0]["day_of_month"] == "24"
     assert cells[0]["kp_text"] is None
     assert cells[0]["aurora_video"] is None
-    # first in-window day
-    assert cells[1]["date_iso"] == "2026-08-18"
-    assert cells[1]["in_window"] is True
-    # today is the last in-window cell (after the one leading placeholder)
-    assert cells[35]["date_iso"] == "2026-09-21"
-    assert cells[35]["in_window"] is True
-    assert cells[35]["is_today"] is True
+    # today is the last in-window cell
+    assert cells[28]["date_iso"] == "2026-09-21"
+    assert cells[28]["in_window"] is True
+    assert cells[28]["is_today"] is True
     # trailing placeholders: the rest of the current week (future days)
-    assert [c["date_iso"] for c in cells[36:]] == [
+    assert [c["date_iso"] for c in cells[29:]] == [
         "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25",
         "2026-09-26", "2026-09-27"]
     assert all(c["in_window"] is False and c["is_today"] is False
-               for c in cells[36:])
+               for c in cells[29:])
+
+
+def test_grid_fixed_six_weeks_for_any_weekday(tmp_path):
+    """calendar_days=42 pins a 6-week grid regardless of today's weekday;
+    data-capable days = 42 - forward padding (max 42 when today is Sunday)."""
+    seed_date_dir(tmp_path, "20260920")
+    for offset, today_iso, sunday_iso in ((3, "2026-09-23", "2026-09-27"),
+                                          (1, "2026-09-21", "2026-09-27"),
+                                          (0, "2026-09-20", "2026-09-20")):
+        now_ts = NOW + offset * 86400
+        r = scanner.scan_archive(tmp_path, now_ts=now_ts, calendar_days=42)
+        cells = all_cells(r)
+        assert len(r["weeks"]) == 6, today_iso
+        assert len(cells) == 42, today_iso
+        # every row starts on Monday; the grid ends on this week's Sunday
+        assert time.strptime(cells[0]["date_iso"],
+                             "%Y-%m-%d").tm_wday == 0, today_iso
+        assert cells[-1]["date_iso"] == sunday_iso, today_iso
+        fwd = 6 - time.strptime(today_iso, "%Y-%m-%d").tm_wday
+        in_window = [c for c in cells if c["in_window"]]
+        assert len(in_window) == 42 - fwd, today_iso
+        assert in_window[-1]["is_today"] is True, today_iso
+        assert all(c["in_window"] is False for c in cells[len(in_window):])
+
+
+def test_range_fields_describe_the_data_window(tmp_path):
+    seed_date_dir(tmp_path, "20260920")
+    r = scanner.scan_archive(tmp_path, now_ts=NOW)  # Sunday, default 35
+    assert r["range_start_iso"] == "2026-08-17"
+    assert r["range_end_iso"] == "2026-09-20"
+    assert r["range_pretty"] == "Aug 17 – Sep 20, 2026"
+    r42 = scanner.scan_archive(tmp_path, now_ts=NOW, calendar_days=42)
+    assert r42["range_start_iso"] == "2026-08-10"
+    assert r42["range_pretty"] == "Aug 10 – Sep 20, 2026"
+    r_mon = scanner.scan_archive(tmp_path, now_ts=NOW + 86400)
+    assert r_mon["range_start_iso"] == "2026-08-24"
+    assert r_mon["range_end_iso"] == "2026-09-21"
+    assert r_mon["range_pretty"] == "Aug 24 – Sep 21, 2026"
 
 
 def test_media_and_today_flags(tmp_path):
