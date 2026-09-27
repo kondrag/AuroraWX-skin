@@ -71,6 +71,10 @@ check_not "$OUT/index.html" 'Conditions as of'
 # Title and header times: no seconds, no leading-zero hour (%-I strips it)
 check_not "$OUT/index.html" 'Conditions as of [0-9][0-9]-[A-Z][a-z][a-z]-[0-9][0-9][0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
 check_not "$OUT/index.html" '[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+# Almanac page: dd-Mon-yyyy dates, hours without leading zero, no seconds
+check "$OUT/almanac.html" '[0-9][0-9]-[A-Z][a-z][a-z]-[0-9][0-9][0-9][0-9]'
+check_not "$OUT/almanac.html" '[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]'
+check_not "$OUT/almanac.html" '[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
 # Sun/moon rise/set times: no seconds (bare $almanac defaults used to render HH:MM:SS)
 check_not "$OUT/index.html" '[0-9][0-9]:[0-9][0-9]:[0-9][0-9] [AP]M'
 # Header date uses dd-Mon-yyyy; Gallery Latest card title carries no date
