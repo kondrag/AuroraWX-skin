@@ -151,6 +151,7 @@
       chart: { type: 'bar', height: 220, animations: { enabled: false } },
       theme: { mode: window.theme_mode || 'dark' },
       plotOptions: { bar: { columnWidth: '90%' } },
+      stroke: { show: false },
       dataLabels: { enabled: false },
       xaxis: { type: 'datetime' },
       yaxis: { min: 0, max: 9, tickAmount: 9 },
