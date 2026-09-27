@@ -44,6 +44,7 @@ def record_for(ts):
         "rain": rain, "rainRate": round(0.12 * rain * 12, 2),
         "radiation": round(rad, 1), "UV": round(max(0.0, rad / 90.0), 1),
         "inTemp": 70.5, "inHumidity": 42,
+        "rxCheckPercent": 97 + int(3 * math.sin(ts / 9000.0)),
     }
 
 

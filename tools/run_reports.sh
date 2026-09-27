@@ -87,6 +87,10 @@ check "$OUT/month.html" "$(date -d "$(date +%Y-%m-01)" +'%b %-d, %Y') to"
 check_not "$OUT/year.html" 'Historical data from the past year'  # title is the bare date/range
 check "$OUT/year.html" "$(date -d 'Jan 1' +'%b %-d, %Y') to"
 check "$OUT/archive.html" 'Available weather history'
+# telemetry page: signal quality card + chart render from seeded rxCheckPercent data
+check "$OUT/telemetry.html" 'Signal Quality'
+check "$OUT/telemetry.html" 'id="rxCheckPercent-chart"'
+check_not "$OUT/telemetry.html" '>rxCheckPercent</h5>'  # label must not fall back to raw key
 
 
 check_not "$OUT/index.html" 'Radio Blackout</small>'
