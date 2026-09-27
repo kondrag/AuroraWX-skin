@@ -42,6 +42,9 @@
       "kpUrl": "$Extras.Aurora.kp_url",
       "windUrl": "$Extras.Aurora.wind_url",
       "magUrl": "$Extras.Aurora.mag_url",
+      "kpForecastUrl": "$Extras.Aurora.kp_forecast_url",
+      "xraysLongUrl": "$Extras.Aurora.xrays_long_url",
+      "protonsUrl": "$Extras.Aurora.protons_url",
       "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
       "snapshotRefreshSeconds": $int($Extras.Aurora.snapshot_refresh_seconds),
       "cameras": [
@@ -116,34 +119,34 @@
     ## Activity cards
     <div class="row my-4">
       <div class="col-6 col-md-3 mb-3">
-        <div class="card h-100 text-center">
-          <div class="card-body">
-            <div class="display-4" id="kp-now">&mdash;</div>
-            <div class="text-muted">Kp index</div>
+        <div class="card kp-accent h-100 text-center" id="kp-fcst-card">
+          <div class="card-body d-flex flex-column justify-content-between">
+            <div class="display-4" id="kp-fcst">&mdash;</div>
+            <div class="text-muted">Kp 24 h fcst</div>
           </div>
         </div>
       </div>
       <div class="col-6 col-md-3 mb-3">
-        <div class="card h-100 text-center">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <div class="py-2"><span class="badge aurora-badge" id="aurora-badge">&hellip;</span></div>
-            <div class="text-muted">Activity</div>
+        <div class="card kp-accent h-100 text-center rsg-card" id="rsg-g-card">
+          <div class="card-body d-flex flex-column justify-content-between">
+            <div class="h4 py-1"><span class="aurora-chip" id="rsg-g-now">&mdash;</span></div>
+            <div class="text-muted">Geomagnetic storm</div>
           </div>
         </div>
       </div>
       <div class="col-6 col-md-3 mb-3">
-        <div class="card h-100 text-center">
-          <div class="card-body">
-            <div class="display-4" id="bz-now">&mdash;</div>
-            <div class="text-muted">Bz (nT)</div>
+        <div class="card kp-accent h-100 text-center rsg-card" id="rsg-s-card">
+          <div class="card-body d-flex flex-column justify-content-between">
+            <div class="h4 py-1"><span class="aurora-chip" id="rsg-s-now">&mdash;</span></div>
+            <div class="text-muted">Solar radiation storm</div>
           </div>
         </div>
       </div>
       <div class="col-6 col-md-3 mb-3">
-        <div class="card h-100 text-center">
-          <div class="card-body">
-            <div class="display-4" id="wind-now">&mdash;</div>
-            <div class="text-muted">Solar wind (km/s)</div>
+        <div class="card kp-accent h-100 text-center rsg-card" id="rsg-r-card">
+          <div class="card-body d-flex flex-column justify-content-between">
+            <div class="h4 py-1"><span class="aurora-chip" id="rsg-r-now">&mdash;</span></div>
+            <div class="text-muted">Radio blackout</div>
           </div>
         </div>
       </div>
@@ -184,30 +187,6 @@
           <div class="card-body">
             <h5 class="card-title">Kp index, last 24 hours</h5>
             <div id="kp-chart"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    ## Pipeline status + links
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body d-flex flex-wrap align-items-center">
-            <div class="mr-auto">
-              <span class="text-muted mr-2">Archive status:</span>
-              #if $aurora.status == 'ok'
-              <span class="badge badge-success">up to date</span>
-              #elif $aurora.status == 'stale'
-              <span class="badge badge-warning">stale data</span>
-              #elif $aurora.status == 'encoding'
-              <span class="badge badge-info">tonight's timelapse still encoding</span>
-              #else
-              <span class="badge badge-secondary">no data</span>
-              #end if
-            </div>
-            <a class="btn btn-$Extras.color btn-sm mr-2" href="gallery.html">Timelapse gallery</a>
-            <a class="btn btn-$Extras.color btn-sm" href="solar.html">Solar activity</a>
           </div>
         </div>
       </div>

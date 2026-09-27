@@ -120,7 +120,7 @@
   </title>
   #include "head.inc"
   <link rel="stylesheet" href="css/aurora.css?v=$aurora.asset_version">
-</head>
+  </head>
 <body class="${Extras.Appearance.mode}-theme main-bg" ontouchstart="">
 
 #include "header.inc"
@@ -128,8 +128,12 @@
 <main>
   <div class="container-fluid d-flex-xxl">
 
-    <h2 class="$Extras.color-text mt-4">$Extras.Translations[$Extras.language].title_year: $year.dateTime.format("%b %d, %Y") to $current.dateTime.format("%b %d, %Y")</h2>
-
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <h2 class="$Extras.color-text mb-0">$year.dateTime.format("%b %-d, %Y") to $current.dateTime.format("%b %-d, %Y")</h2>
+      <select class="form-control w-auto" data-periods="years" data-prefix="year/year-" data-parse="YYYY" data-fmt="YYYY" onchange="if (this.value) window.location.href = this.value"><option value="" selected disabled>$Extras.Translations[$Extras.language].select_period</option></select>
+    </div>
+        <script src="periods.js?v=$aurora.asset_version"></script>
+    
     <div class="row my-4 temprow align-content-start">
       #for $x in $Extras.Appearance.values_order
 

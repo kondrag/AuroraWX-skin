@@ -106,3 +106,22 @@
         }
     })();
 </script>
+## Live Kp status for the header stack (chip + "Kp:" reading). The three
+## live pages (current/aurora/solar) emit their own richer aurora-config
+## and load this module themselves, so only the remaining pages get a
+## minimal config here. All module behavior is element-guarded.
+#if $active_nav not in ('current', 'aurora', 'solar')
+<script type="application/json" id="aurora-config">
+{
+  "page": "",
+  "kpUrl": "$Extras.Aurora.kp_url",
+  "windUrl": "$Extras.Aurora.wind_url",
+  "magUrl": "$Extras.Aurora.mag_url",
+  "xraysLongUrl": "$Extras.Aurora.xrays_long_url",
+  "protonsUrl": "$Extras.Aurora.protons_url",
+  "noaaRefreshSeconds": $int($Extras.Aurora.noaa_refresh_seconds),
+  "snapshotRefreshSeconds": 0
+}
+</script>
+<script src="js/modules/aurora.js"></script>
+#end if

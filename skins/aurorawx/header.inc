@@ -17,12 +17,13 @@
             #end if
             <span>
                 <strong>$station.location</strong><br>
-                <span class="font-small">$current.dateTime</span>
+                <span class="font-small">$current.dateTime.format("%d-%b-%Y %-I:%M %p")</span>
             </span>
             #if $Extras.Header.show_aurora_icon == "yes"
-            <img src="img/aurora-borealis.svg" alt=""
-                 class="aurora-loc-icon"
-                 title="Aurora borealis">
+            <span class="header-kp-stack" title="Current Kp index activity">
+                <span class="badge aurora-badge" id="header-kp-badge">&hellip;</span>
+                <span class="font-small header-kp-line">Kp: <span id="header-kp">&mdash;</span></span>
+            </span>
             #end if
         </span>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
@@ -57,9 +58,9 @@
                         <div class="dropdown-menu">
                         #if $Extras.Header.yesterday_nav_link == "yes"
                             #if $active_nav == 'yesterday'
-                            <a class="dropdown-item active" href="yesterday.html">$Extras.Translations[$Extras.language].yesterday</a>
+                            <a class="dropdown-item active" href="day.html">$Extras.Translations[$Extras.language].yesterday</a>
                             #else
-                            <a class="dropdown-item" href="yesterday.html">$Extras.Translations[$Extras.language].yesterday</a>
+                            <a class="dropdown-item" href="day.html">$Extras.Translations[$Extras.language].yesterday</a>
                             #end if
                         #end if
                         #if $Extras.Header.week_nav_link == "yes"
@@ -161,12 +162,12 @@
             #if $almanac.hasExtras
             <ul class="navbar-nav nav-flex-icons" style="line-height: 1.75; padding-top: .5rem">
                 <li class="nav-item mr-4 text-white">
-                    <i class="wi wi-sunrise mr-1" style="opacity: .75"></i> $almanac.sun.rise <br>
-                    <i class="wi wi-sunset mr-1" style="opacity: .75"></i> $almanac.sun.set
+                    <i class="wi wi-sunrise mr-1" style="opacity: .75"></i> $almanac.sun.rise.format("%-I:%M %p") <br>
+                    <i class="wi wi-sunset mr-1" style="opacity: .75"></i> $almanac.sun.set.format("%-I:%M %p")
                 </li>
                 <li class="nav-item mr-4 text-white" style="line-height: 1.75">
-                    <i class="wi wi-moonrise mr-1" style="opacity: .75"></i> $almanac.moon.rise <br>
-                    <i class="wi wi-moonset mr-1" style="opacity: .75"></i> $almanac.moon.set
+                    <i class="wi wi-moonrise mr-1" style="opacity: .75"></i> $almanac.moon.rise.format("%-I:%M %p") <br>
+                    <i class="wi wi-moonset mr-1" style="opacity: .75"></i> $almanac.moon.set.format("%-I:%M %p")
                 </li>
                 <li class="nav-item mr-4 text-white text-center" style="line-height: 1.75" >
                     <span title="$almanac.moon_phase" data-toggle="tooltip">

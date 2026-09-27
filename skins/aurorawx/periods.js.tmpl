@@ -4,7 +4,7 @@
 ## +-------------------------------------------------------------------------+
 
 ## Generated on every report run (ToDate generation). Holds the list of
-## available day, week and month archive pages; the period selector dropdowns
+## available day, week, month and year archive pages; the period selector dropdowns
 ## on the day/week/month pages populate themselves client-side from this
 ## file, so the pages themselves stay small and the dropdowns are always
 ## current. Values are chronological: days/weeks are 'YYYY-MM-DD' (a week
@@ -24,6 +24,16 @@ window.AuroraPeriods = {
   "months": [
     #for $val in $SummaryByMonth
     "$val",
+    #end for
+  ],
+  "years": [
+    #set $seen = []
+    #for $val in $SummaryByDay
+    #set $y = $val[:4]
+    #if $y not in $seen
+    #silent $seen.append($y)
+    "$y",
+    #end if
     #end for
   ]
 };

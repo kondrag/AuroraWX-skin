@@ -138,13 +138,29 @@
   padding: .5rem 1rem 0;
 }
 
-/* Aurora borealis icon beside the location name in the header —
-   sized to match the weather logo (4rem), vertically centered by
-   the navbar-brand flex row */
-.aurora-loc-icon {
-  height: 4rem;
-  width: auto;
+/* Current-Kp stack in the header (replaces the aurora borealis icon):
+   the Activity-card style chip on top, the numeric Kp reading below.
+   Sized to sit where the old 4rem icon sat in the navbar-brand flex
+   row; the chip color is set inline by aurora.js (badgeFor palette).
+   Full-height column: space-between pins the chip beside the location
+   line and the reading beside the timestamp line, with a minimum gap;
+   the bottom padding compensates for the 4rem logo row so the reading
+   bottom-aligns with the timestamp line. */
+.header-kp-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.5rem;
   margin-left: 0.75rem;
+  line-height: 1.5;
+}
+
+.header-kp-stack .header-kp-line {
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 body.aurora-modal-open {
@@ -214,6 +230,32 @@ body.aurora-modal-open {
 .aurora-chip-l3 { background: #c62828; }
 .aurora-chip-l4 { background: #8e0000; }
 .aurora-chip-l5 { background: #6a1b9a; }
+
+/* NOAA scale cards (Solar page): the R/S/G chip doubles as the card's
+   big value, and the card border accent mirrors the chip ramp above
+   (same hexes; set inline-class by aurora.js setRsgChip). */
+.rsg-card .aurora-chip {
+  font-size: 1.4rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.rsg-accent-l0 { border-top-color: #2e7d32; }
+.rsg-accent-l1 { border-top-color: #f9a825; }
+.rsg-accent-l2 { border-top-color: #ef6c00; }
+.rsg-accent-l3 { border-top-color: #c62828; }
+.rsg-accent-l4 { border-top-color: #8e0000; }
+.rsg-accent-l5 { border-top-color: #6a1b9a; }
+
+/* Value tiles: center the value vertically in the space above the
+   bottom-pinned label, so chips and smaller fonts sit mid-card like
+   the display-4 tiles (justify-content-between pins only the label). */
+.card-body.d-flex.flex-column.justify-content-between > .display-4,
+.card-body.d-flex.flex-column.justify-content-between > .h4 {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* ---------------------------------------------------------------------------
  * Ultra-wide screen guard (>= 1660px)
@@ -412,14 +454,17 @@ button.tl-cell:focus {
 .kp-band-4 { background: #ff0000; color: #fff; }
 .kp-band-5 { background: #c80000; color: #fff; }
 
-/* Solar-page Kp tile accents. Colors match the Kp chart bars driven by
-   kpThresholdColor() in js/modules/aurora.js; the JS swaps the modifier
-   class as the value crosses each threshold. */
+/* Solar-page Kp tile accents on the NOAA geomagnetic scale. Colors match
+   the RSG chip ramp (kp-accent-g0..g5 set by kpAccentClass() in
+   js/modules/aurora.js): green below 5, then G1 yellow, G2 orange, G3 red,
+   G4 dark red, G5 purple. */
 .kp-accent { border-top: 3px solid transparent; }
-.kp-accent-quiet { border-top-color: #43a047; }
-.kp-accent-moderate { border-top-color: #fdd835; }
-.kp-accent-elevated { border-top-color: #fb8c00; }
-.kp-accent-storm { border-top-color: #e53935; }
+.kp-accent-g0 { border-top-color: #2e7d32; }
+.kp-accent-g1 { border-top-color: #f9a825; }
+.kp-accent-g2 { border-top-color: #ef6c00; }
+.kp-accent-g3 { border-top-color: #c62828; }
+.kp-accent-g4 { border-top-color: #8e0000; }
+.kp-accent-g5 { border-top-color: #6a1b9a; }
 
 @media (max-width: 576px) {
   .tl-calendar {

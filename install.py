@@ -16,8 +16,10 @@ SKIN_FILES = [
     'skins/aurorawx/aurora.html.tmpl',
     'skins/aurorawx/css/aurora.css',
     'skins/aurorawx/css/bootstrap.min.css',
+    'skins/aurorawx/css/flatpickr.min.css',
     'skins/aurorawx/css/style.css',
     'skins/aurorawx/css/style.min.css',
+    'skins/aurorawx/day.html.tmpl',
     'skins/aurorawx/day/day-%Y-%m-%d.html.tmpl',
     'skins/aurorawx/fonts/OFL.txt',
     'skins/aurorawx/fonts/Rubik-Light.eot',
@@ -86,6 +88,7 @@ SKIN_FILES = [
     'skins/aurorawx/js/mdb.min.js',
     'skins/aurorawx/js/mdb.min.js.map',
     'skins/aurorawx/js/modules/aurora.js',
+    'skins/aurorawx/js/modules/period-picker.js',
     'skins/aurorawx/js/modules/wow.min.js',
     'skins/aurorawx/js/popper.js',
     'skins/aurorawx/js/popper.min.js',
@@ -123,6 +126,7 @@ SKIN_FILES = [
     'skins/aurorawx/js/vendor/apexcharts/locales/tr.json',
     'skins/aurorawx/js/vendor/apexcharts/locales/ua.json',
     'skins/aurorawx/js/vendor/apexcharts/locales/zh-cn.json',
+    'skins/aurorawx/js/vendor/flatpickr.min.js',
     'skins/aurorawx/js/vendor/moment-with-locales.min.js',
     'skins/aurorawx/js/vendor/moment.min.js',
     'skins/aurorawx/manifest.json',
@@ -365,7 +369,6 @@ SKIN_FILES = [
     'skins/aurorawx/week/week-%Y-%m-%d.html.tmpl',
     'skins/aurorawx/year.html.tmpl',
     'skins/aurorawx/year/year-%Y.html.tmpl',
-    'skins/aurorawx/yesterday.html.tmpl',
 ]
 # --- END GENERATED SKIN FILES ---
 
