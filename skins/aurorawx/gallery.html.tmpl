@@ -173,12 +173,20 @@
             <img class="tl-cell-img"
                  src="$cell.aurora_thumbnail?v=$cell.aurora_mtime"
                  alt="Night timelapse for $cell.date_iso" loading="lazy">
-            #end if
-            #if $cell.kp_text
-            <span class="tl-kp $cell.kp_css">Kp $cell.kp_text</span>
             #else
-            <span class="tl-kp-none">&#8211;</span>
+            <div class="tl-cell-ph"></div>
             #end if
+            <div class="tl-chip-row">
+              #if $cell.moon_css
+              <i class="wi $cell.moon_css tl-moon" role="img"
+                 aria-label="$cell.moon_name" title="$cell.moon_name"></i>
+              #end if
+              #if $cell.kp_text
+              <span class="tl-kp $cell.kp_css">Kp $cell.kp_text</span>
+              #else
+              <span class="tl-kp-none">&#8211;</span>
+              #end if
+            </div>
           #if $cell.aurora_video
           </button>
           #else

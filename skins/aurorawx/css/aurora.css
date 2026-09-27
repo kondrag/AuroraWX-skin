@@ -429,6 +429,14 @@ button.tl-cell:focus {
   margin-top: 0.25rem;
 }
 
+/* Invisible spacer mirroring .tl-cell-img so no-thumbnail cells keep
+ * the same date / slot / chips structure as video cells. */
+.tl-cell-ph {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 0.25rem;
+}
+
 .tl-kp {
   margin-top: 0.25rem;
   display: inline-block;
@@ -444,6 +452,38 @@ button.tl-cell:focus {
   color: #9e9e9e;
   font-weight: 400;
   font-size: 0.72rem;
+}
+
+/* Moon phase glyph beside the Kp chip; theme-adaptive color like
+ * .tl-date since cells sit outside .card. */
+.tl-chip-row {
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.tl-moon {
+  display: inline-flex;
+  align-items: center;
+  height: 1.12rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  opacity: .75;
+  color: #212121;
+  /* wi-moon glyphs ride high in their em box; nudge onto the chip axis */
+  transform: translateY(0.07rem);
+}
+
+.dark-theme .tl-moon {
+  color: #ddd !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auto-theme .tl-moon {
+    color: #ddd !important;
+  }
 }
 
 /* SWPC planetary K-index chart palette (services.swpc.noaa.gov) */
@@ -483,5 +523,11 @@ button.tl-cell:focus {
   .tl-kp {
     font-size: 0.62rem;
     padding: 0.12rem 0.25rem;
+  }
+
+  .tl-moon {
+    height: 0.86rem;
+    font-size: 0.9rem;
+    transform: translateY(0.05rem);
   }
 }

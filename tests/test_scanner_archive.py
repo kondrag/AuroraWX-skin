@@ -372,3 +372,67 @@ def test_month_classes_alternate_across_three_months(tmp_path):
             order.append((yyyymm, cell["month_class"]))
     assert [cls for _, cls in order] == ["tl-month-even", "tl-month-odd",
                                          "tl-month-even"]
+
+
+def utc(y, mo, d, h, mi):
+    import calendar
+    return calendar.timegm((y, mo, d, h, mi, 0, 0, 0, 0))
+
+
+MOON_EIGHTH_BUCKETS = [
+    # (phase fraction, name, css, fullness band)
+    (0.00, "New moon", "wi-moon-new", (0, 5)),
+    (0.125, "Waxing crescent", "wi-moon-waxing-crescent-4", (10, 20)),
+    (0.25, "First quarter", "wi-moon-first-quarter", (40, 60)),
+    (0.375, "Waxing gibbous", "wi-moon-waxing-gibbous-4", (80, 90)),
+    (0.50, "Full moon", "wi-moon-full", (95, 100)),
+    (0.625, "Waning gibbous", "wi-moon-waning-gibbous-4", (80, 90)),
+    (0.75, "Last quarter", "wi-moon-third-quarter", (40, 60)),
+    (0.875, "Waning crescent", "wi-moon-waning-crescent-4", (10, 20)),
+    (0.97, "New moon", "wi-moon-new", (0, 5)),
+]
+
+
+def test_moon_phase_name_buckets_eighth_cycle():
+    for frac, name, css, (lo, hi) in MOON_EIGHTH_BUCKETS:
+        ts = scanner.MOON_EPOCH + frac * scanner.SYNODIC_MONTH * 86400
+        got_name, got_css, fullness = scanner.moon_phase_name(ts)
+        assert (got_name, got_css) == (name, css), frac
+        assert lo <= fullness <= hi, frac
+
+
+def test_moon_phase_name_known_dates():
+    """Anchored to documented 2000-01 lunar events: new moon
+    2000-01-06 18:14 UTC and the total lunar eclipse (full moon)
+    2000-01-21 04:40 UTC."""
+    name, css, fullness = scanner.moon_phase_name(utc(2000, 1, 6, 18, 14))
+    assert (name, css) == ("New moon", "wi-moon-new")
+    assert fullness < 5
+    name, css, fullness = scanner.moon_phase_name(utc(2000, 1, 21, 4, 40))
+    assert (name, css) == ("Full moon", "wi-moon-full")
+    assert fullness > 95
+
+
+def test_calendar_cells_carry_moon_phase(tmp_path):
+    """35-day window ending 2000-01-28 spans the Jan 2000 new/full moon;
+    the phase is evaluated at each cell's night-window midpoint."""
+    (tmp_path / "d").mkdir()
+    r = scanner.scan_archive(tmp_path, now_ts=utc(2000, 1, 28, 6, 0))
+    cells = {c["date_iso"]: c for c in all_cells(r) if c["in_window"]}
+    full = cells["2000-01-21"]
+    assert full["moon_css"] == "wi-moon-full"
+    assert full["moon_name"] == "Full moon"
+    assert full["moon_fullness"] > 90
+    new = cells["2000-01-06"]
+    assert new["moon_css"] == "wi-moon-new"
+    assert new["moon_fullness"] < 10
+    # every in-window day gets a complete phase triple
+    assert all(c["moon_css"] and c["moon_name"] and c["moon_fullness"] is not None
+               for c in cells.values())
+
+
+def test_out_cell_has_empty_moon_keys():
+    cell = scanner._out_cell("20260920", "20260920")
+    assert cell["moon_css"] == ""
+    assert cell["moon_name"] is None
+    assert cell["moon_fullness"] is None

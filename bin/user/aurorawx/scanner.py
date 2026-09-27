@@ -87,6 +87,24 @@ KP_BANDS = (
     {"max_kp": 9.01, "label": "Kp 9  G5 Extreme", "css": "kp-band-5"},
 )
 
+# Moon phase for calendar cells, computed from Meeus' truncated lunar
+# theory (see _moon_elongation): sub-degree accuracy with stdlib trig
+# only, keeping the scanner dependency-free. MOON_EPOCH anchors the
+# phase-fraction helpers used by tests. CSS classes are Weather Icons
+# glyphs, the same eight the header/almanac pages use.
+MOON_EPOCH = 947182440.0      # 2000-01-06 18:14 UTC new moon
+SYNODIC_MONTH = 29.530588853  # mean lunation, days
+MOON_PHASES = (
+    ("New moon", "wi-moon-new"),
+    ("Waxing crescent", "wi-moon-waxing-crescent-4"),
+    ("First quarter", "wi-moon-first-quarter"),
+    ("Waxing gibbous", "wi-moon-waxing-gibbous-4"),
+    ("Full moon", "wi-moon-full"),
+    ("Waning gibbous", "wi-moon-waning-gibbous-4"),
+    ("Last quarter", "wi-moon-third-quarter"),
+    ("Waning crescent", "wi-moon-waning-crescent-4"),
+)
+
 DEFAULT_CAMERAS = ({"key": "sky", "label": "Sky camera",
                     "image": SNAPSHOT_NAME},)
 
@@ -466,6 +484,7 @@ def _out_cell(date_compact, today_iso):
         "cloud_video": None, "cloud_thumbnail": None, "cloud_mtime": None,
         "spaceweather": None, "spaceweather_mtime": None,
         "kp_peak": None, "kp_text": None, "kp_level": None, "kp_css": "",
+        "moon_name": None, "moon_css": "", "moon_fullness": None,
     }
 
 
@@ -495,6 +514,7 @@ def _archive_cell(sub_dir, date_compact, today_iso,
         "cloud_video": None, "cloud_thumbnail": None, "cloud_mtime": None,
         "spaceweather": None, "spaceweather_mtime": None,
         "kp_peak": None, "kp_text": None, "kp_level": None, "kp_css": "",
+        "moon_name": None, "moon_css": "", "moon_fullness": None,
     }
 
     def set_asset(slot, thumb_slot, mtime_slot, name, thumb_name):
@@ -519,6 +539,11 @@ def _archive_cell(sub_dir, date_compact, today_iso,
 
     day = datetime.strptime(iso, "%Y-%m-%d").date()
     window = night_window_utc(day, latitude, longitude, tz_name)
+    # phase at the middle of the imaging night, not local midnight: the
+    # night straddles two calendar dates
+    mid_ts = (window[0] + window[1]) / 2.0
+    (cell["moon_name"], cell["moon_css"],
+     cell["moon_fullness"]) = moon_phase_name(mid_ts)
     kp_peak = _kp_peak_for(sub_dir, date_compact, window)
     if kp_peak is not None:
         cell["kp_peak"] = kp_peak
@@ -651,6 +676,57 @@ def night_window_utc(day, latitude=DEFAULT_LATITUDE,
     start = twilight(prev.year, prev.month, prev.day, evening=True)
     end = twilight(y, m, d, evening=False)
     return start, end
+
+
+# Meeus, Astronomical Algorithms (chs. 25, 47): mean elements referred
+# to J2000 plus the dominant lunar longitude terms -- sub-degree
+# accuracy with stdlib trig only.
+_MOON_JD_J2000 = 2451545.0
+
+
+def _moon_elongation(jd):
+    """Moon-sun elongation in degrees (0..360) at a Julian date."""
+    d = jd - _MOON_JD_J2000
+    # Sun's apparent ecliptic longitude (truncated series)
+    sun_anom = _fixangle(357.52911 + 0.98560028 * d)
+    sun_lon = _fixangle(280.4665 + 0.98564736 * d
+                        + 1.9148 * math.sin(math.radians(sun_anom))
+                        + 0.02 * math.sin(math.radians(2 * sun_anom)))
+    # Moon's ecliptic longitude: mean elements plus the leading
+    # longitude terms (units: degrees)
+    lon = 218.3164477 + 13.17639648 * d
+    d_elong = 297.8501921 + 12.19074912 * d
+    anom = 134.9633964 + 13.06499295 * d
+    arg_lat = 93.2720950 + 13.22935024 * d
+    lon += (6.288774 * math.sin(math.radians(anom))
+            + 1.274027 * math.sin(math.radians(2 * d_elong - anom))
+            + 0.658314 * math.sin(math.radians(2 * d_elong))
+            + 0.213618 * math.sin(math.radians(2 * anom))
+            - 0.185116 * math.sin(math.radians(sun_anom))
+            - 0.114332 * math.sin(math.radians(2 * arg_lat))
+            + 0.058793 * math.sin(math.radians(2 * d_elong - 2 * anom))
+            + 0.057066 * math.sin(math.radians(2 * d_elong - sun_anom - anom))
+            + 0.053322 * math.sin(math.radians(2 * d_elong + anom))
+            + 0.045758 * math.sin(math.radians(2 * d_elong - sun_anom)))
+    return _fixangle(lon - sun_lon)
+
+
+def _fixangle(a):
+    return a % 360.0
+
+
+def moon_phase_name(ts):
+    """(name, css, fullness %) for the moon at a UTC epoch.
+
+    Bucketed to the eight principal phases (45-degree bands centered on
+    new moon, first quarter, full moon, last quarter); fullness is the
+    illuminated fraction as a whole percent.
+    """
+    jd = ts / 86400.0 + 2440587.5
+    angle = _moon_elongation(jd)
+    name, css = MOON_PHASES[int(angle / 45.0 + 0.5) % 8]
+    fullness = int(round((1.0 - math.cos(math.radians(angle))) / 2.0 * 100))
+    return name, css, fullness
 
 
 def _load_kp_samples(path):

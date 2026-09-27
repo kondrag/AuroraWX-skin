@@ -154,6 +154,15 @@ check "$OUT/gallery.html" 'Kp 6.3'
 check "$OUT/gallery.html" 'kp-band-2'
 check "$OUT/gallery.html" 'tl-month-even'
 check "$OUT/gallery.html" 'tl-month-odd'
+# moon phase glyphs on every in-window day; the 35-day window spans a
+# full synodic month, so both a new and a full moon cell must appear
+check "$OUT/gallery.html" 'tl-chip-row'
+check "$OUT/gallery.html" 'tl-moon'
+check "$OUT/gallery.html" 'wi wi-moon-'
+check "$OUT/gallery.html" 'aria-label="Full moon"'
+check "$OUT/gallery.html" 'aria-label="New moon"'
+# no-thumbnail cells reserve the same 16:9 slot so all date boxes align
+check "$OUT/gallery.html" 'tl-cell-ph'
 check "$OUT/gallery.html" 'card-title">Latest'
 check_not "$OUT/gallery.html" '>today<'
 check "$OUT/solar.html" 'regions-tbody'
@@ -243,6 +252,9 @@ check "$OUT/week/$WEEKFILE" 'js/vendor/flatpickr.min.js?v='
 check "$OUT/week/$WEEKFILE" 'css/flatpickr.min.css?v='
 check_not "$OUT/week/$WEEKFILE" '<select'
 check "$OUT/year/year-$(date +%Y).html" "$(date +%Y)"
+check "$OUT/year/year-$(date +%Y).html" 'data-periods="years"'
+check "$OUT/year/year-$(date +%Y).html" '<select class="form-control w-auto" data-periods='
+check "$OUT/year/year-$(date +%Y).html" 'src="periods.js?v='
 ls "$OUT"/week/week-*.html >/dev/null || { echo "FAIL: no week/week-*.html generated"; exit 1; }
 echo "ok: week/week-*.html files generated"
 ls "$OUT"/day/day-*.html >/dev/null || { echo "FAIL: no day/day-*.html generated"; exit 1; }
