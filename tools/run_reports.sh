@@ -95,6 +95,10 @@ check "$OUT/archive.html" 'Available weather history'
 check "$OUT/telemetry.html" 'Signal Quality'
 check "$OUT/telemetry.html" 'id="rxCheckPercent-chart"'
 check_not "$OUT/telemetry.html" '>rxCheckPercent</h5>'  # label must not fall back to raw key
+# sensor status + about-station cards (ported from Seasons)
+check "$OUT/telemetry.html" 'Sensor Status'
+check "$OUT/telemetry.html" 'About this station'
+check "$OUT/telemetry.html" 'WeeWX uptime'
 
 
 check_not "$OUT/index.html" 'Radio Blackout</small>'

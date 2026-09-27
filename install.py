@@ -9,6 +9,7 @@ VERSION = "1.0.0"
 
 # --- BEGIN GENERATED SKIN FILES (tools/gen_install.py) ---
 SKIN_FILES = [
+    'skins/aurorawx/about_station.inc',
     'skins/aurorawx/almanac.html.tmpl',
     'skins/aurorawx/archive.html.tmpl',
     'skins/aurorawx/archive/NOAA-%Y-%m.txt.tmpl',
@@ -133,6 +134,7 @@ SKIN_FILES = [
     'skins/aurorawx/month.html.tmpl',
     'skins/aurorawx/month/month-%Y-%m.html.tmpl',
     'skins/aurorawx/periods.js.tmpl',
+    'skins/aurorawx/sensors_status.inc',
     'skins/aurorawx/skin.conf',
     'skins/aurorawx/solar.html.tmpl',
     'skins/aurorawx/telemetry.html.tmpl',
