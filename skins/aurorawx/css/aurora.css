@@ -376,14 +376,17 @@ body.aurora-modal-open {
   opacity: 0.35;
 }
 
-/* Alternate months get slightly different gray washes; both stay a
- * touch off the page background in light and dark themes. */
+/* Alternate months get clearly different gray washes so the month
+ * transitions read at a glance; both stay a touch off the page
+ * background in light and dark themes. The alpha gap must stay wide
+ * (gray-over-dark compresses lightness differences, so a narrow gap
+ * like 0.08/0.16 renders both washes nearly identical). */
 .tl-month-even {
-  background: rgba(128, 128, 128, 0.08);
+  background: rgba(128, 128, 128, 0.05);
 }
 
 .tl-month-odd {
-  background: rgba(128, 128, 128, 0.16);
+  background: rgba(128, 128, 128, 0.30);
 }
 
 /* Placeholder days outside the archive window (before it starts or

@@ -154,6 +154,12 @@ check "$OUT/gallery.html" 'Kp 6.3'
 check "$OUT/gallery.html" 'kp-band-2'
 check "$OUT/gallery.html" 'tl-month-even'
 check "$OUT/gallery.html" 'tl-month-odd'
+# alternate months must be clearly distinguishable: wide alpha gap
+# between the even/odd washes (8 points was nearly invisible).
+# Single-line patterns only: grep treats embedded newlines in a
+# pattern as separators, which would make these checks vacuous.
+check "$OUT/css/aurora.css" 'background: rgba(128, 128, 128, 0.05)'
+check "$OUT/css/aurora.css" 'background: rgba(128, 128, 128, 0.30)'
 # moon phase glyphs on every in-window day; the 35-day window spans a
 # full synodic month, so both a new and a full moon cell must appear
 check "$OUT/gallery.html" 'tl-chip-row'
