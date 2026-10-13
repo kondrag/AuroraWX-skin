@@ -20,6 +20,8 @@
 <script src="js/vendor/apexcharts/apexcharts.min.js"></script>
 ## NeoWX Material App
 <script type="text/javascript" src="js/app.js"></script>
+## Header light/dark theme toggle
+<script type="text/javascript" src="js/modules/theme.js"></script>
 
 ## Global apexcharts config
 <script type="text/javascript">
@@ -32,6 +34,14 @@
     if(config_mode != "auto") {
         theme_mode = config_mode;
     }
+    // Viewer override from the header theme toggle (beats config + OS),
+    // so charts are created in the theme the pre-paint resolver applied.
+    try {
+        var savedTheme = localStorage.getItem('aurora-theme');
+        if (savedTheme === 'light' || savedTheme === 'dark') {
+            theme_mode = savedTheme;
+        }
+    } catch (e) { /* storage unavailable: keep resolved default */ }
 
     window.Apex = {
         theme: {

@@ -10,8 +10,27 @@ DATA=dev-weewx/weewx-data
 OUT="$DATA/public_html"
 
 run_scenario() {
+  # Route weewx logging to stdout instead of syslog, so the error grep
+  # below can see template failures. Without this, cheetahgenerator
+  # errors go only to the journal, the engine still prints "Done.", and
+  # the assertions would run against stale HTML from an earlier run.
+  conf="$DATA/weewx-$1.conf"
+  grep -q '^\[Logging\]' "$conf" || cat >> "$conf" <<'EOF'
+
+[Logging]
+    [[root]]
+        level = INFO
+        handlers = console,
+
+    [[handlers]]
+        [[[console]]]
+            level = DEBUG
+            formatter = verbose
+            class = logging.StreamHandler
+            stream = ext://sys.stdout
+EOF
   PYTHONPATH="$PWD/$DATA/bin" .venv/bin/weectl report run AuroraWXReport \
-    --config="$DATA/weewx-$1.conf" 2>&1 | tee "/tmp/aurora-run-$1.log"
+    --config="$conf" 2>&1 | tee "/tmp/aurora-run-$1.log"
   if grep -qE 'Traceback|ERROR ' "/tmp/aurora-run-$1.log"; then
     echo "FAIL: tracebacks/errors in $1 run"; exit 1
   fi
@@ -85,7 +104,10 @@ check_not "$OUT/gallery.html" 'card-title">Latest$'
 check_not "$OUT/day.html" 'Historical data from the past day'  # title is the bare date/range
 check "$OUT/day.html" "$(date -d yesterday +'%b %-d, %Y')"
 check_not "$OUT/week.html" 'Historical data from the past week'  # title is the bare date/range
-check "$OUT/week.html" "$(date -d 'last monday' +'%b %-d, %Y') to"
+# current week's Monday (date -d 'last monday' would point at yesterday's
+# week whenever the suite runs on a Monday)
+WEEKMON=$(.venv/bin/python -c "import datetime; t=datetime.date.today(); print((t-datetime.timedelta(days=t.weekday())).strftime('%b %-d, %Y'))")
+check "$OUT/week.html" "$WEEKMON to"
 check_not "$OUT/month.html" 'Historical data from the past month'  # title is the bare date/range
 check "$OUT/month.html" "$(date -d "$(date +%Y-%m-01)" +'%b %-d, %Y') to"
 check_not "$OUT/year.html" 'Historical data from the past year'  # title is the bare date/range
@@ -116,6 +138,21 @@ check_not "$OUT/index.html" 'aurora-status-card'
 check_not "$OUT/index.html" 'img/aurora-borealis.svg'
 check "$OUT/index.html" 'id="header-kp-badge"'
     check "$OUT/index.html" 'Kp: <span id="header-kp">'
+# footer light/dark toggle: entry renders in the credits line on every
+# page, the toggle module is served, and its styles ship in the bundle
+check "$OUT/index.html" 'id="theme-toggle"'
+check "$OUT/aurora.html" 'id="theme-toggle"'
+check "$OUT/index.html" 'Toggle light/dark mode'
+# the entry is a plain footer link like its neighbors, not a <button>
+check_not "$OUT/index.html" '<button type="button" class="theme-toggle"'
+check "$OUT/index.html" '<a href="#" role="button" class="theme-toggle"'
+check "$OUT/js/modules/theme.js" 'preventDefault'
+# the old navbar icon button must be gone (its sun icon was unique to it)
+check_not "$OUT/index.html" 'wi-day-sunny'
+check "$OUT/index.html" 'aurora-theme'
+check "$OUT/js/modules/theme.js" "var THEME_KEY = 'aurora-theme'"
+check "$OUT/js/modules/theme.js" 'localStorage.setItem(THEME_KEY'
+check "$OUT/css/style.min.css" '.theme-toggle'
     check "$OUT/css/aurora.css" 'justify-content: space-between'
     check "$OUT/css/aurora.css" 'gap: 0.35rem'
     check "$OUT/css/aurora.css" 'padding-top: 0.35rem'
@@ -276,6 +313,7 @@ check "$OUT/gallery.html" 'Archive calendar not available'
 
 run_scenario empty
 check "$OUT/gallery.html" 'No timelapses found yet'
+check "$OUT/index.html" 'id="theme-toggle"'
 
 run_scenario nocam
 check "$OUT/aurora.html" 'Viewing section is disabled'

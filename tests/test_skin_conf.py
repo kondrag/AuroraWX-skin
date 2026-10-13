@@ -21,3 +21,10 @@ def test_signal_quality_has_label():
 def test_signal_quality_in_telemetry_order():
     order = load_skin_conf()["Extras"]["Appearance"]["telemetry_order"]
     assert "rxCheckPercent" in order
+
+
+def test_footer_show_theme_toggle_defaults_on():
+    # The footer "Toggle light/dark mode" entry ships enabled; admins opt
+    # out with no.
+    toggle = load_skin_conf()["Extras"]["Footer"]["show_theme_toggle"]
+    assert toggle == "yes"

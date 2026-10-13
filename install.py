@@ -90,6 +90,7 @@ SKIN_FILES = [
     'skins/aurorawx/js/mdb.min.js.map',
     'skins/aurorawx/js/modules/aurora.js',
     'skins/aurorawx/js/modules/period-picker.js',
+    'skins/aurorawx/js/modules/theme.js',
     'skins/aurorawx/js/modules/wow.min.js',
     'skins/aurorawx/js/popper.js',
     'skins/aurorawx/js/popper.min.js',

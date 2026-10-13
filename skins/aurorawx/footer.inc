@@ -118,6 +118,11 @@
           #end if
         #end if
 
+        #if $Extras.Footer.show_theme_toggle == "yes"
+          <span class="mx-2">&bull;</span>
+          <a href="#" role="button" class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">Toggle light/dark mode</a>
+        #end if
+
         #if $Extras.Footer.imprint_url != ""
         <span class="mx-2">&bull;</span>
         <a href="$Extras.Footer.imprint_url" target="_blank">$Extras.Footer.imprint_label</a>

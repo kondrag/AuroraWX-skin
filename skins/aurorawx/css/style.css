@@ -5359,3 +5359,15 @@ body {
 
 .yellow {
   background-color: #FBC02D !important; }
+
+/* Footer light/dark toggle entry (viewer choice persisted in localStorage).
+   Rendered as a plain footer anchor so it is styled exactly like the
+   neighboring credit links in light, .dark-theme, and the
+   prefers-color-scheme auto mode alike. Hidden without JS: the pre-paint
+   resolver in header.inc adds aurora-js to <html> only when scripting
+   is available. */
+.footer-copyright .theme-toggle {
+  display: none; }
+
+html.aurora-js .footer-copyright .theme-toggle {
+  display: inline; }

@@ -2,6 +2,27 @@
 ## +-------------------------------------------------------------------------+
 ## |    header.inc                 Header section (nav) for all templates    |
 ## +-------------------------------------------------------------------------+
+
+## Pre-paint theme sync: runs right after <body> opens, before any content
+## parses, so a viewer's saved light/dark choice (theme toggle) applies
+## without a flash. The body theme class stays the single source of truth;
+## the resolver rewrites the server-baked class when an override exists.
+## The aurora-js class reveals the toggle entry only when JS is available.
+<script>
+(function () {
+    'use strict';
+    var saved = null;
+    try {
+        saved = localStorage.getItem('aurora-theme');
+    } catch (e) { /* storage unavailable: keep the server default */ }
+    if (saved === 'light' || saved === 'dark') {
+        document.body.classList.remove('auto-theme', 'light-theme', 'dark-theme');
+        document.body.classList.add(saved + '-theme');
+    }
+    document.documentElement.classList.add('aurora-js');
+})();
+</script>
+
 <header>
 
     <nav class="navbar navbar-expand-lg navbar-dark $Extras.color">
